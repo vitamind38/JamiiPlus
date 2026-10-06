@@ -212,3 +212,8 @@ audio { width: 100%; margin-top: 4px; }
   svg .mark { fill: CanvasText; }
 }
 .nowrap { white-space: nowrap; }
+
+/* Public demo */
+.demo-banner { background: var(--warn-wash); color: var(--warn-ink); padding: 8px 24px; font-size: 0.9rem; text-align: center; }
+.demo-logins-title { margin-top: 24px; }
+.demo-logins td { padding: 6px 8px; }

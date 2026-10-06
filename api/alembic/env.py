@@ -6,7 +6,9 @@ from jamii_api.config import get_settings
 from jamii_api.db import Base
 
 config = context.config
-config.set_main_option("sqlalchemy.url", get_settings().database_url.replace("%", "%%"))
+# A caller (the demo bootstrap) may pass a direct, unpooled URL; otherwise use the app's.
+url = config.attributes.get("database_url") or get_settings().database_url
+config.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
 target_metadata = Base.metadata
 
 

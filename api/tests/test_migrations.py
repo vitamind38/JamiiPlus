@@ -70,3 +70,18 @@ def test_dashboard_views_query(pg, db):
             conn.execute(text(f"SELECT * FROM dashboards.{view} LIMIT 5")).all()
         cols = conn.execute(text("SELECT * FROM dashboards.reports LIMIT 1")).keys()
         assert "chp_id" not in cols and "raw_text" not in cols
+
+
+def test_demo_bootstrap_migrates_and_seeds_once(pg, db, monkeypatch):
+    from jamii_api import demo
+    from jamii_api.config import get_settings
+    from jamii_api.models import Report
+
+    monkeypatch.setattr(get_settings(), "demo_mode", True)
+    first = demo.bootstrap()  # takes the advisory lock, runs Alembic, loads demo data
+    assert first and first["reports"] > 0
+    assert demo.bootstrap() == {}  # a second cold start changes nothing
+    assert db.query(Report).count() == first["reports"]
+    engine, _ = pg
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0002"

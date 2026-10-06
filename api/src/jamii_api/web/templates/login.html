@@ -12,5 +12,14 @@
     <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0712 345 678" value="{{ phone or '' }}" required autofocus>
     <div class="actions"><button type="submit">Send code</button></div>
   </form>
+  {% if demo_mode() %}
+  <h2 class="demo-logins-title">Demo logins</h2>
+  <p class="small muted">Use any of these numbers. The code appears on the next screen.</p>
+  <table class="demo-logins">
+    <tbody>
+    {% for phone, role, note in demo_logins %}<tr><td class="num nowrap">{{ phone }}</td><td><strong>{{ role }}</strong><div class="small muted">{{ note }}</div></td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
 </div>
 {% endblock %}

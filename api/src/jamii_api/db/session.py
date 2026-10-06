@@ -17,7 +17,10 @@ def make_engine(url: str) -> Engine:
             dbapi_conn.execute("PRAGMA foreign_keys=ON")
 
         return engine
-    return create_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=10)
+    # Behind PgBouncer in transaction mode (Neon's "-pooler" host), server-side prepared
+    # statements are not reliable, so psycopg must not create them.
+    connect_args = {"prepare_threshold": None} if "-pooler." in url else {}
+    return create_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=10, connect_args=connect_args)
 
 
 @lru_cache

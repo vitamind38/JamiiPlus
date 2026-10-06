@@ -42,3 +42,7 @@ jamii_api = ["web/templates/**/*.html", "web/static/*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["postgres: needs a real PostgreSQL/PostGIS database (runs in CI)"]
+
+# Vercel (public demo only): serve the FastAPI app from vercel_app.py.
+[tool.vercel]
+entrypoint = "vercel_app:app"

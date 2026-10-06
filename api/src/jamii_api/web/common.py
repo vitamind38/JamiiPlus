@@ -7,6 +7,7 @@ from fastapi import HTTPException, Request
 from fastapi.templating import Jinja2Templates
 
 from jamii_api import messages
+from jamii_api.config import get_settings
 from jamii_api.models import IssueStatus, Level, ReportStatus
 from jamii_api.security import pseudonym
 from jamii_api.services import scope
@@ -41,7 +42,18 @@ templates.env.globals.update(
     can_review=scope.can_review,
     is_admin=scope.is_admin,
     can_act_on=scope.can_act_on,
+    demo_mode=lambda: get_settings().demo_mode,
 )
+
+# Shown on the demo's login page. Synthetic accounts created by seed.demo_data().
+DEMO_LOGINS = [
+    ("0700 000 004", "County officer", "sees the whole county, answers any issue"),
+    ("0700 000 003", "Sub-county officer", "answers and escalates issues"),
+    ("0700 000 002", "Community health assistant", "one unit; also reviews reports"),
+    ("0700 000 005", "Reviewer", "tags reports in the review queue"),
+    ("0700 000 001", "Admin", "units, people and themes"),
+]
+templates.env.globals["demo_logins"] = DEMO_LOGINS
 
 
 def csrf_token(request: Request) -> str:

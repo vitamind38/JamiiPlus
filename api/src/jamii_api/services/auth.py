@@ -24,7 +24,7 @@ class TooManyAttempts(AuthError):
 @dataclass
 class OtpSent:
     phone: str
-    dev_code: str | None = None  # only when JAMII_DEV_SHOW_OTP is on in local development
+    dev_code: str | None = None  # only in local development or the public demo (no real SMS there)
 
 
 def _locked(db: Session, ph: str) -> bool:
@@ -69,7 +69,7 @@ def request_code(db: Session, raw_phone: str, audience: str, ip: str | None = No
     language = getattr(account, "language", "en")
     sms.send_now(phone, messages.sms("otp", language, code=code, minutes=s.otp_ttl_seconds // 60))
     audit.record("auth.code_sent", actor_type="chp" if audience == "chp" else "user", actor_id=account.id, ip=ip)
-    return OtpSent(phone, code if s.dev_show_otp and s.environment == "local" else None)
+    return OtpSent(phone, code if s.shows_codes_on_screen else None)
 
 
 def _account(db: Session, phone: str, audience: str) -> Chp | User | None:

@@ -3,7 +3,7 @@
 from enum import StrEnum
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,6 +12,14 @@ class PipelineMode(StrEnum):
     MANUAL = "manual"
     # Phase 3+: workers call the model service; anything below threshold still goes to a person.
     ASSISTED = "assisted"
+
+
+def with_psycopg_driver(url: str) -> str:
+    """Providers hand out postgres:// or postgresql:// URLs; SQLAlchemy needs the driver named."""
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix) :]
+    return url
 
 
 class Settings(BaseSettings):
@@ -23,9 +31,17 @@ class Settings(BaseSettings):
     pseudonym_key: str = Field(default="dev-only-pseudonym-key-change-me-too", min_length=32)
     base_url: str = "http://localhost:8000"
 
-    database_url: str = "postgresql+psycopg://jamii:jamii@localhost:5432/jamii"
+    # DATABASE_URL is what hosted Postgres providers (Neon on Vercel) inject; JAMII_ wins if both are set.
+    database_url: str = Field(
+        default="postgresql+psycopg://jamii:jamii@localhost:5432/jamii",
+        validation_alias=AliasChoices("JAMII_DATABASE_URL", "DATABASE_URL"),
+    )
     # The audit log lives in its own database so nobody editing reports can edit the trail.
-    audit_database_url: str = "postgresql+psycopg://jamii_audit:jamii_audit@localhost:5432/jamii_audit"
+    # (The Vercel demo has one database, so there it shares DATABASE_URL.)
+    audit_database_url: str = Field(
+        default="postgresql+psycopg://jamii_audit:jamii_audit@localhost:5432/jamii_audit",
+        validation_alias=AliasChoices("JAMII_AUDIT_DATABASE_URL", "DATABASE_URL"),
+    )
     redis_url: str = "redis://localhost:6379/0"
     # When false (or Redis is unreachable) the API does the work inline instead of queueing it.
     queue_enabled: bool = True
@@ -78,18 +94,39 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
     # Shows one-time codes on the login page. Refused outside local development.
     dev_show_otp: bool = False
+    # Public demo with synthetic data (the Vercel deployment): shows a banner and the demo
+    # logins, puts one-time codes on screen, and never sends a real SMS.
+    demo_mode: bool = False
+
+    @field_validator("database_url", "audit_database_url")
+    @classmethod
+    def _psycopg_driver(cls, url: str) -> str:
+        return with_psycopg_driver(url)
 
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
 
+    @property
+    def shows_codes_on_screen(self) -> bool:
+        return self.demo_mode or (self.dev_show_otp and self.environment == "local")
+
+    def check(self) -> None:
+        """Refuse unsafe combinations before serving anything."""
+        if self.environment != "local":
+            if self.secret_key.startswith("dev-") or self.pseudonym_key.startswith("dev-"):
+                raise RuntimeError("Set JAMII_SECRET_KEY and JAMII_PSEUDONYM_KEY outside local development")
+            if self.dev_show_otp:
+                raise RuntimeError("JAMII_DEV_SHOW_OTP is only allowed in local development")
+        if self.demo_mode:
+            if self.is_production:
+                raise RuntimeError("JAMII_DEMO_MODE is never allowed in production")
+            if self.sms_backend != "console":
+                raise RuntimeError("A demo never sends real SMS: set JAMII_SMS_BACKEND=console")
+
 
 @lru_cache
 def get_settings() -> Settings:
     settings = Settings()
-    if settings.environment != "local":
-        if settings.secret_key.startswith("dev-") or settings.pseudonym_key.startswith("dev-"):
-            raise RuntimeError("Set JAMII_SECRET_KEY and JAMII_PSEUDONYM_KEY outside local development")
-        if settings.dev_show_otp:
-            raise RuntimeError("JAMII_DEV_SHOW_OTP is only allowed in local development")
+    settings.check()
     return settings

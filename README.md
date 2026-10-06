@@ -50,6 +50,15 @@ Open http://localhost:8000 and log in as a demo officer: `0700 000 004` (county)
 `0700 000 001` (admin). The one-time code appears on the page in local development. Data is
 synthetic; SMS are printed to the console.
 
+## Public demo on Vercel (synthetic data only)
+
+`api/` also deploys to Vercel as a clickable demo of the officer web app: Vercel project root
+`api/`, entrypoint `api/vercel_app.py`, functions in Frankfurt next to a Neon Postgres
+database. With `JAMII_DEMO_MODE=true` the app refuses to start unless SMS is in console mode,
+shows a "made-up data" banner and the demo logins, and puts one-time codes on screen. Each
+cold start migrates and loads the synthetic data once. Vercel has no Kenyan region and cannot
+run the workers, so **the demo must never hold real CHP data**; the pilot runs on the stack below.
+
 ## Run the real stack
 
 ```bash

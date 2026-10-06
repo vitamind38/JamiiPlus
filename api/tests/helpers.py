@@ -10,8 +10,8 @@ _tmp = Path(tempfile.mkdtemp(prefix="jamii-test-"))
 os.environ.update(
     {
         "JAMII_ENVIRONMENT": "local",
-        "JAMII_DATABASE_URL": os.environ.get("TEST_DATABASE_URL", f"sqlite:///{_tmp / 'test.db'}"),
-        "JAMII_AUDIT_DATABASE_URL": os.environ.get("TEST_AUDIT_DATABASE_URL", f"sqlite:///{_tmp / 'audit.db'}"),
+        "JAMII_DATABASE_URL": os.environ.get("TEST_DATABASE_URL") or f"sqlite:///{_tmp / 'test.db'}",
+        "JAMII_AUDIT_DATABASE_URL": os.environ.get("TEST_AUDIT_DATABASE_URL") or f"sqlite:///{_tmp / 'audit.db'}",
         "JAMII_STORAGE_BACKEND": "local",
         "JAMII_STORAGE_LOCAL_DIR": str(_tmp / "audio"),
         "JAMII_SMS_BACKEND": "console",

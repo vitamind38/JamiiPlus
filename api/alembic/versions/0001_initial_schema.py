@@ -285,11 +285,11 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_transcript")),
         sa.UniqueConstraint("report_id", name=op.f("uq_transcript_report_id")),
     )
-    op.execute("CREATE INDEX ix_community_health_unit_geom ON community_health_unit USING GIST (geom)")
+    op.create_index("ix_community_health_unit_geom", "community_health_unit", ["geom"], postgresql_using="gist")
 
 
 def downgrade() -> None:
-    op.execute("DROP INDEX IF EXISTS ix_community_health_unit_geom")
+    op.drop_index("ix_community_health_unit_geom", table_name="community_health_unit")
     op.drop_table("transcript")
     op.drop_index(op.f("ix_sms_outbox_status"), table_name="sms_outbox")
     op.drop_index(op.f("ix_sms_outbox_response_id"), table_name="sms_outbox")

@@ -13,6 +13,7 @@ from sqlalchemy import (
     Boolean,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -83,6 +84,7 @@ class ResponseKind(StrEnum):
 
 class CommunityHealthUnit(Base):
     __tablename__ = "community_health_unit"
+    __table_args__ = (Index("ix_community_health_unit_geom", "geom", postgresql_using="gist"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String(32), unique=True)

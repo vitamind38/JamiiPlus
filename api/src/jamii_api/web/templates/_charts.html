@@ -1,0 +1,64 @@
+{# One-series charts drawn as inline SVG (the CSP forbids inline styles). Value sits at the bar tip. #}
+
+{% macro hbars(rows, label_for=None, unit="reports") %}
+{% set top = (rows | map(attribute=1) | max) if rows else 0 %}
+<ul class="bars">
+  {% for key, n in rows %}
+  {% set name = label_for(key) if label_for else key %}
+  {% set pct = (n / top * 82) if top else 0 %}
+  <li data-tip="{{ name }}: {{ n }} {{ unit }}">
+    <span class="name">{{ name }}</span>
+    <svg class="hbar" width="100%" height="20" role="img" aria-label="{{ name }}: {{ n }} {{ unit }}">
+      <line x1="0" y1="0" x2="0" y2="20" class="axis"/>
+      {% if pct >= 3 %}
+      <rect x="0" y="1" width="{{ '%.2f' % pct }}%" height="18" rx="4" class="mark"/>
+      <rect x="0" y="1" width="4" height="18" class="mark"/>
+      {% elif n > 0 %}
+      <rect x="0" y="1" width="{{ '%.2f' % [pct, 0.6] | max }}%" height="18" class="mark"/>
+      {% endif %}
+      <text x="{{ '%.2f' % pct }}%" dx="6" y="15" class="val">{{ n }}</text>
+    </svg>
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+{% macro columns(rows, unit="reports") %}
+{% set top = (rows | map(attribute=1) | max) if rows else 0 %}
+{% set slot = 100 / (rows | length) if rows else 100 %}
+{% set w = slot * 0.62 %}
+<svg class="colchart" width="100%" height="170" role="img" aria-label="Reports per week">
+  <line x1="0" y1="150" x2="100%" y2="150" class="axis"/>
+  {% for key, n in rows %}
+  {% set h = (n / top * 120) if top else 0 %}
+  {% set x = slot * loop.index0 + (slot - w) / 2 %}
+  <g data-tip="Week of {{ key }}: {{ n }} {{ unit }}">
+    <rect x="{{ '%.3f' % (slot * loop.index0) }}%" y="0" width="{{ '%.3f' % slot }}%" height="170" class="hit"/>
+    {% if h >= 5 %}
+    <rect x="{{ '%.3f' % x }}%" y="{{ '%.1f' % (150 - h) }}" width="{{ '%.3f' % w }}%" height="{{ '%.1f' % h }}" rx="4" class="mark"/>
+    <rect x="{{ '%.3f' % x }}%" y="146" width="{{ '%.3f' % w }}%" height="4" class="mark"/>
+    {% elif n > 0 %}
+    <rect x="{{ '%.3f' % x }}%" y="148" width="{{ '%.3f' % w }}%" height="2" class="mark"/>
+    {% endif %}
+    {% if loop.last or n == top %}
+    <text x="{{ '%.3f' % (x + w / 2) }}%" y="{{ '%.1f' % (150 - h - 6) }}" text-anchor="middle" class="val">{{ n }}</text>
+    {% endif %}
+    {% if loop.first or loop.last or loop.index0 % 3 == 0 %}
+    <text x="{{ '%.3f' % (x + w / 2) }}%" y="166" text-anchor="middle" class="tick">{{ key[5:] }}</text>
+    {% endif %}
+  </g>
+  {% endfor %}
+</svg>
+{% endmacro %}
+
+{% macro table_view(rows, head, label_for=None) %}
+<details class="table-view">
+  <summary>Show as table</summary>
+  <table>
+    <thead><tr><th>{{ head }}</th><th class="num">Count</th></tr></thead>
+    <tbody>
+    {% for key, n in rows %}<tr><td>{{ label_for(key) if label_for else key }}</td><td class="num">{{ n }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endmacro %}

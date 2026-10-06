@@ -1,0 +1,23 @@
+line-length = 120
+target-version = "py311"
+extend-exclude = ["mobile", "api/alembic/versions"]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "N", "RUF"]
+ignore = [
+  "B008",   # FastAPI Depends()/Form() in defaults is the framework's idiom
+  "S101",   # asserts are fine in tests
+  "S311",   # random is only used for synthetic demo data and sampling, not secrets
+  "RUF001", "RUF002", "RUF003",  # Swahili text and typographic punctuation are intentional
+  "RUF012", # class-level mutable in the console SMS backend is deliberate
+  "N818",   # exception names read better without the Error suffix here
+]
+
+[lint.per-file-ignores]
+"*/tests/*" = ["S", "N802"]
+"api/src/jamii_api/config.py" = ["S105"]  # dev-only defaults; refused outside local
+"ml/scripts/*" = ["S", "N806"]
+"scripts/*" = ["S603", "S607"]  # operator scripts call git and docker by name
+
+[lint.isort]
+known-first-party = ["jamii_api", "jamii_workers", "jamii_ml"]

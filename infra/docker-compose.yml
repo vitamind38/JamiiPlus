@@ -1,0 +1,228 @@
+# Jamii Pulse: everything on one Kenya-hosted server.
+#
+#   cp infra/.env.example infra/.env        # then fill in every secret
+#   docker compose -f infra/docker-compose.yml up -d --build
+#   docker compose -f infra/docker-compose.yml --profile dashboards --profile monitoring up -d
+#
+# Only Caddy publishes ports. The model service, database, queue and storage sit on a network
+# with no route out, so audio and report text cannot leave the server from those containers.
+
+name: jamii-pulse
+
+x-backend: &backend
+  build:
+    context: ..
+    dockerfile: infra/docker/backend.Dockerfile
+  image: ${JAMII_IMAGE_PREFIX:-jamii-pulse}/backend:${JAMII_VERSION:-dev}
+  env_file: .env
+  environment:
+    JAMII_DATABASE_URL: postgresql+psycopg://jamii:${JAMII_DB_PASSWORD}@postgres:5432/jamii
+    JAMII_AUDIT_DATABASE_URL: postgresql+psycopg://jamii_audit:${JAMII_AUDIT_DB_PASSWORD}@postgres:5432/jamii_audit
+    JAMII_REDIS_URL: redis://redis:6379/0
+    JAMII_MINIO_ENDPOINT: minio:9000
+    JAMII_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+    JAMII_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    JAMII_MODEL_SERVICE_URL: http://model:8100
+  restart: unless-stopped
+  # public gives egress to Africa's Talking and Sentry; nothing here publishes a port.
+  networks: [internal, public]
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JAMII_DB_PASSWORD: ${JAMII_DB_PASSWORD}
+      JAMII_AUDIT_DB_PASSWORD: ${JAMII_AUDIT_DB_PASSWORD}
+      METABASE_DB_PASSWORD: ${METABASE_DB_PASSWORD}
+      METABASE_READER_PASSWORD: ${METABASE_READER_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+    restart: unless-stopped
+    networks: [internal]
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - audio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+    restart: unless-stopped
+    networks: [internal]
+
+  # Creates the bucket and a storage-level expiry rule, as a backstop to the nightly purge job.
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      minio: {condition: service_healthy}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" &&
+        mc mb --ignore-existing local/voice-notes &&
+        mc anonymous set none local/voice-notes &&
+        mc ilm rule add --expire-days $$(( ${JAMII_AUDIO_RETENTION_DAYS:-30} + 7 )) local/voice-notes || true
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    restart: "no"
+    networks: [internal]
+
+  migrate:
+    <<: *backend
+    command: ["alembic", "-c", "api/alembic.ini", "upgrade", "head"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: "no"
+
+  api:
+    <<: *backend
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
+
+  worker:
+    <<: *backend
+    command: ["celery", "-A", "jamii_workers.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+    healthcheck:
+      disable: true
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+
+  beat:
+    <<: *backend
+    command: ["celery", "-A", "jamii_workers.celery_app", "beat", "--loglevel=info",
+              "--schedule=/tmp/celerybeat-schedule"]
+    healthcheck:
+      disable: true
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+
+  model:
+    build:
+      context: ..
+      dockerfile: infra/docker/model.Dockerfile
+      args:
+        EXTRAS: ${JAMII_MODEL_EXTRAS:-}
+    image: ${JAMII_IMAGE_PREFIX:-jamii-pulse}/model:${JAMII_VERSION:-dev}
+    volumes:
+      - ml-state:/srv/ml
+    restart: unless-stopped
+    networks: [internal]
+
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    environment:
+      JAMII_DOMAIN: ${JAMII_DOMAIN}
+      METABASE_DOMAIN: ${METABASE_DOMAIN:-metabase.invalid}
+      GRAFANA_DOMAIN: ${GRAFANA_DOMAIN:-grafana.invalid}
+      AT_CALLBACK_ALLOW: ${AT_CALLBACK_ALLOW:-0.0.0.0/0}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on: [api]
+    restart: unless-stopped
+    networks: [internal, public]
+
+  metabase:
+    profiles: [dashboards]
+    image: metabase/metabase:latest
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_HOST: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_USER: metabase
+      MB_DB_PASS: ${METABASE_DB_PASSWORD}
+      MB_ANON_TRACKING_ENABLED: "false"
+      MB_CHECK_FOR_UPDATES: "false"
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: unless-stopped
+    networks: [internal]
+
+  prometheus:
+    profiles: [monitoring]
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus:/etc/prometheus:ro
+      - prometheus:/prometheus
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=90d"]
+    restart: unless-stopped
+    networks: [internal]
+
+  alertmanager:
+    profiles: [monitoring]
+    image: prom/alertmanager:latest
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    restart: unless-stopped
+    networks: [internal]
+
+  grafana:
+    profiles: [monitoring]
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana:/var/lib/grafana
+    restart: unless-stopped
+    networks: [internal]
+
+  node-exporter:
+    profiles: [monitoring]
+    image: prom/node-exporter:latest
+    command: ["--collector.textfile.directory=/textfile"]
+    volumes:
+      - /var/lib/jamii/metrics:/textfile:ro
+    restart: unless-stopped
+    networks: [internal]
+
+  redis-exporter:
+    profiles: [monitoring]
+    image: oliver006/redis_exporter:latest
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_EXPORTER_CHECK_SINGLE_KEYS: "celery"
+    restart: unless-stopped
+    networks: [internal]
+
+volumes:
+  pgdata:
+  audio:
+  ml-state:
+  caddy-data:
+  prometheus:
+  grafana:
+
+networks:
+  internal:
+    internal: true
+  public:

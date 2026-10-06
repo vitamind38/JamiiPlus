@@ -1,0 +1,79 @@
+name: deploy
+
+# main deploys to staging (synthetic reports only); a vX.Y.Z tag deploys to production.
+# Off until a server exists: set the repository variable DEPLOY_ENABLED=true (Settings →
+# Secrets and variables → Actions → Variables) after adding the STAGING_HOST, PRODUCTION_HOST,
+# DEPLOY_USER and DEPLOY_SSH_KEY secrets. Until then no images are published.
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        run: echo "tag=${GITHUB_REF_TYPE/branch/main}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - if: github.ref_type == 'tag'
+        run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+        id: release
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        env:
+          TAG: ${{ steps.release.outputs.tag || steps.tag.outputs.tag }}
+          PREFIX: ghcr.io/${{ github.repository_owner }}/jamii-pulse
+        run: |
+          docker build -f infra/docker/backend.Dockerfile -t "$PREFIX/backend:$TAG" .
+          docker build -f infra/docker/model.Dockerfile -t "$PREFIX/model:$TAG" .
+          docker push "$PREFIX/backend:$TAG"
+          docker push "$PREFIX/model:$TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+  staging:
+    if: github.ref_type == 'branch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Deploy and run the end-to-end check
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /opt/jamii-pulse && git fetch --all && git checkout ${{ github.sha }}
+            infra/scripts/deploy.sh main-${GITHUB_SHA::7}
+            docker compose -f infra/docker-compose.yml exec -T api jamii e2e
+
+  production:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production   # requires a named reviewer's approval in GitHub
+    steps:
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /opt/jamii-pulse && git fetch --all --tags && git checkout ${{ github.ref_name }}
+            infra/scripts/deploy.sh ${{ github.ref_name }}

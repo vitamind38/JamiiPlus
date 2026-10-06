@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jamii-api"
+version = "0.1.0"
+description = "Jamii Pulse API: barrier reports in, officer responses back out"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "sqlalchemy>=2.0.30",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.2",
+    "geoalchemy2>=0.15",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "itsdangerous>=2.2",
+    "pyjwt>=2.8",
+    "httpx>=0.27",
+    "minio>=7.2",
+    "celery[redis]>=5.4",
+    "prometheus-client>=0.20",
+    "sentry-sdk[fastapi]>=2.10",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+jamii = "jamii_api.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+jamii_api = ["web/templates/**/*.html", "web/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["postgres: needs a real PostgreSQL/PostGIS database (runs in CI)"]

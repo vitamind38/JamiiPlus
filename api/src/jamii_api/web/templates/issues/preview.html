@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Check the SMS · Issue #{{ issue.id }} · Jamii Pulse{% endblock %}
+{% block content %}
+<p class="small"><a href="/issues/{{ issue.id }}">← Back to issue #{{ issue.id }}</a></p>
+<h1>Check before sending</h1>
+<p class="sub">This goes out under your name to {{ draft.recipient_count }} CHP{{ 's' if draft.recipient_count != 1 }} who reported {{ issue.theme.label_en|lower }} in {{ issue.ward }}. Each gets it in their own language.</p>
+
+<div class="card stack">
+  <dl class="meta">
+    <dt>Action</dt><dd>{{ status_label(draft.kind.value) }}{% if draft.new_level %} to {{ level_label(draft.new_level.value) }}{% endif %}{% if draft.resolution %} · {{ 'acted on' if draft.resolution.value == 'actioned' else 'not acted on' }}{% endif %}</dd>
+    <dt>Recipients</dt><dd>{{ draft.recipient_count }}</dd>
+  </dl>
+  {% for language, text in draft.sms_by_language.items() %}
+  <div>
+    <h3>{{ 'Kiswahili' if language == 'sw' else 'English' }} <span class="muted small">{{ text|length }} characters</span></h3>
+    <div class="sms">{{ text }}</div>
+  </div>
+  {% endfor %}
+  <form method="post" action="/issues/{{ issue.id }}/respond">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="kind" value="{{ draft.kind.value }}">
+    <input type="hidden" name="action_text" value="{{ draft.action_text }}">
+    {% if draft.resolution %}<input type="hidden" name="resolution" value="{{ draft.resolution.value }}">{% endif %}
+    <div class="actions">
+      <button type="submit">Save and send to {{ draft.recipient_count }} CHP{{ 's' if draft.recipient_count != 1 }}</button>
+      <a class="btn secondary" href="/issues/{{ issue.id }}">Edit</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

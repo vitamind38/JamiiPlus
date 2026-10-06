@@ -1,0 +1,45 @@
+{
+	# Automatic HTTPS from Let's Encrypt for every site below.
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+}
+
+{$JAMII_DOMAIN} {
+	import security_headers
+	encode gzip
+	request_body {
+		max_size 5MB
+	}
+
+	# Internal endpoints are never exposed. Prometheus scrapes the API on the internal network.
+	@internal path /metrics /docs* /openapi.json
+	respond @internal 404
+
+	# Africa's Talking callbacks: only from their published addresses (set AT_CALLBACK_ALLOW).
+	@channels_blocked {
+		path /channels/*
+		not remote_ip {$AT_CALLBACK_ALLOW}
+	}
+	respond @channels_blocked 403
+
+	reverse_proxy api:8000
+}
+
+{$METABASE_DOMAIN} {
+	import security_headers
+	reverse_proxy metabase:3000
+}
+
+{$GRAFANA_DOMAIN} {
+	import security_headers
+	reverse_proxy grafana:3000
+}

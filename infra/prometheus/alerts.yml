@@ -1,0 +1,91 @@
+# Every alert has a runbook in docs/runbooks/. Keep the two in step.
+groups:
+  - name: jamii
+    rules:
+      - alert: ApiDown
+        expr: up{job="api"} == 0
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: The API is not answering. CHPs cannot report and officers cannot respond.
+          runbook: docs/runbooks/api-down.md
+
+      - alert: ApiErrors
+        expr: |
+          sum(rate(jamii_http_requests_total{status=~"5.."}[10m]))
+            / clamp_min(sum(rate(jamii_http_requests_total[10m])), 0.001) > 0.05
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: More than 5% of API requests are failing.
+          runbook: docs/runbooks/api-errors.md
+
+      - alert: ReviewQueueGrowing
+        expr: sum(jamii_review_queue) > 100
+        for: 2h
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $value }} reports are waiting for a person. Reports do not reach issues until reviewed."
+          runbook: docs/runbooks/review-queue.md
+
+      - alert: ReportsStuckInPipeline
+        expr: jamii_reports_processing > 0
+        for: 45m
+        labels: {severity: warning}
+        annotations:
+          summary: Reports are waiting for workers. The sweep job should move them to people; check the workers.
+          runbook: docs/runbooks/workers.md
+
+      - alert: CeleryBacklog
+        expr: redis_key_size{key="celery"} > 200
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: Background jobs are piling up.
+          runbook: docs/runbooks/workers.md
+
+      - alert: SmsFailing
+        expr: increase(jamii_sms_outbox{status="failed"}[1h]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: Some status SMS to CHPs failed for good. The "you said, we did" loop is broken for them.
+          runbook: docs/runbooks/sms.md
+
+      - alert: SmsBacklog
+        expr: jamii_sms_outbox{status="queued"} > 50
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: SMS are queued and not going out.
+          runbook: docs/runbooks/sms.md
+
+      - alert: BackupMissing
+        expr: time() - jamii_backup_last_success_timestamp_seconds > 26 * 3600
+        labels: {severity: critical}
+        annotations:
+          summary: No successful encrypted backup in the last 26 hours.
+          runbook: docs/runbooks/backups.md
+
+      - alert: BackupMetricAbsent
+        expr: absent(jamii_backup_last_success_timestamp_seconds)
+        for: 26h
+        labels: {severity: critical}
+        annotations:
+          summary: The backup job has never reported success on this server.
+          runbook: docs/runbooks/backups.md
+
+      - alert: ModelAgreementLow
+        expr: jamii_model_agreement < 0.85
+        for: 1d
+        labels: {severity: warning}
+        annotations:
+          summary: Reviewers agree with model-accepted themes less than 85% of the time. Raise the threshold or roll back.
+          runbook: docs/runbooks/model-quality.md
+
+      - alert: DiskFilling
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: Less than 15% disk left.
+          runbook: docs/runbooks/api-down.md

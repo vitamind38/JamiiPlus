@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Issues · Jamii Pulse{% endblock %}
+{% block content %}
+<h1>Issues</h1>
+<p class="sub">Reports about the same theme in the same ward, grouped. Answer them here; the CHPs who raised them get an SMS.</p>
+
+<form method="get" action="/issues" class="card row" aria-label="Filter issues">
+  <div><label for="status">Status</label>
+    <select id="status" name="status">
+      <option value="open" {% if status == 'open' %}selected{% endif %}>Open (not resolved)</option>
+      {% for s in ['received', 'escalated', 'action_taken', 'resolved'] %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ status_label(s) }}</option>{% endfor %}
+      <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+    </select></div>
+  <div><label for="theme">Theme</label>
+    <select id="theme" name="theme"><option value="">All themes</option>
+      {% for t in themes %}<option value="{{ t.code }}" {% if theme == t.code %}selected{% endif %}>{{ t.label_en }}</option>{% endfor %}
+    </select></div>
+  <div><label for="ward">Ward</label>
+    <select id="ward" name="ward"><option value="">All wards</option>
+      {% for w in wards %}<option value="{{ w }}" {% if ward == w %}selected{% endif %}>{{ w }}</option>{% endfor %}
+    </select></div>
+  <div class="actions"><button type="submit" class="secondary">Filter</button></div>
+</form>
+
+<div class="card">
+{% if issues %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>#</th><th>Theme</th><th>Ward</th><th class="num">Reports</th><th>Status</th><th>With</th><th>Last report</th><th>Owner</th></tr></thead>
+    <tbody>
+    {% for i in issues %}
+      <tr>
+        <td><a class="row-link" href="/issues/{{ i.id }}">#{{ i.id }}</a></td>
+        <td>{{ i.theme.label_en }}</td>
+        <td>{{ i.ward }}<div class="small muted">{{ i.sub_county }}</div></td>
+        <td class="num">{{ i.report_count }}</td>
+        <td><span class="pill {{ i.status }}">{{ status_label(i.status) }}</span></td>
+        <td>{{ level_label(i.level) }}</td>
+        <td class="num">{{ i.last_reported_at.strftime('%d %b') }}</td>
+        <td>{{ i.owner.name if i.owner else '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% else %}
+  <p class="muted">No issues match.</p>
+{% endif %}
+</div>
+{% endblock %}

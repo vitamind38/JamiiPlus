@@ -1,0 +1,31 @@
+# Model registry. The `active` version of each task is what the model service serves.
+# Roll back by changing `active` to an earlier version and restarting the model service.
+# A version is added by ml/scripts/train_classifier.py (or by hand for speech and NER models)
+# and only becomes active through ml/scripts/promote.py, which checks its held-out scores.
+#
+# `null` means no model: the service answers 503 and the workers route to people.
+
+classifier:
+  active: keyword-baseline-v1
+  versions:
+    keyword-baseline-v1:
+      kind: keyword
+      notes: Keyword rules from the theme table. The baseline every trained model must beat.
+
+transcriber:
+  active: null
+  versions: {}
+  # Example once a Swahili model has been fine-tuned and its word error rate measured:
+  # whisper-small-sw-2027-01:
+  #   kind: faster-whisper
+  #   path: models/whisper-small-sw-2027-01   # CTranslate2 directory
+  #   device: cpu
+  #   metrics: {wer_sw: 0.24}
+
+ner:
+  active: null
+  versions: {}
+  # ner-swahili-2027-02:
+  #   kind: transformers
+  #   path: models/ner-swahili-2027-02
+  #   labels: [PER]

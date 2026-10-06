@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Review queue · Jamii Pulse{% endblock %}
+{% block content %}
+<h1>Review queue</h1>
+<p class="sub">Every report passes a person before it reaches an issue unless a model was confident enough. Oldest first.</p>
+
+<nav class="tabs" aria-label="Queues">
+  <a href="/review" class="{{ 'on' if not status }}">All<span class="count">{{ counts.needs_redaction + counts.needs_transcription + counts.needs_tagging }}</span></a>
+  <a href="/review?status=needs_redaction" class="{{ 'on' if status == 'needs_redaction' }}">Needs redaction<span class="count">{{ counts.needs_redaction }}</span></a>
+  <a href="/review?status=needs_transcription" class="{{ 'on' if status == 'needs_transcription' }}">Needs transcript<span class="count">{{ counts.needs_transcription }}</span></a>
+  <a href="/review?status=needs_tagging" class="{{ 'on' if status == 'needs_tagging' }}">Needs theme<span class="count">{{ counts.needs_tagging }}</span></a>
+  <a href="/review?status=recheck" class="{{ 'on' if status == 'recheck' }}">Weekly re-check<span class="count">{{ counts.recheck }}</span></a>
+</nav>
+
+<div class="card">
+{% if items %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>#</th><th>Waiting for</th><th>Received</th><th>Channel</th><th>Ward</th><th>CHP chose</th><th>Model suggests</th></tr></thead>
+    <tbody>
+    {% for r in items %}
+      <tr>
+        <td><a class="row-link" href="/review/{{ r.id }}{{ '?from=' ~ status if status else '' }}">#{{ r.id }}</a></td>
+        <td><span class="pill {{ 'recheck' if status == 'recheck' else r.status }}">{{ status_label('recheck' if status == 'recheck' else r.status) }}</span></td>
+        <td class="num">{{ r.created_at.strftime('%d %b %H:%M') }}</td>
+        <td>{{ r.channel|upper }}</td>
+        <td>{{ r.ward }}</td>
+        <td>{{ themes[r.chp_theme_code].label_en if r.chp_theme_code in themes else '—' }}</td>
+        <td>{% if r.classification and r.classification.theme %}{{ themes[r.classification.theme].label_en if r.classification.theme in themes else r.classification.theme }} <span class="muted small">{{ '%.0f%%' % (r.classification.confidence * 100) if r.classification.confidence is not none }}</span>{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% else %}
+  <p class="muted">Nothing waiting here.</p>
+{% endif %}
+</div>
+{% endblock %}

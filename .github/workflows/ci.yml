@@ -1,0 +1,101 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: no secrets or personal data
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python scripts/check_no_personal_data.py
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  python:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/jamii_test
+      TEST_AUDIT_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/jamii_audit_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - name: Create test databases
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE jamii_test"
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE jamii_audit_test"
+      - name: Install
+        run: |
+          pip install -e "api[dev]" -e workers -e "ml/service[dev]"
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check api/src api/tests workers ml
+      - name: API tests on PostGIS (includes migrations and dashboard views)
+        run: pytest api/tests -q
+      - name: API tests on SQLite (the fast local path stays honest too)
+        run: TEST_DATABASE_URL= TEST_AUDIT_DATABASE_URL= pytest api/tests -q -m "not postgres"
+      - name: Worker tests
+        working-directory: workers
+        run: pytest -q
+      - name: Model service and ML script tests
+        working-directory: ml/service
+        run: pytest -q
+      - name: Migrations render offline
+        working-directory: api
+        run: JAMII_DATABASE_URL=postgresql+psycopg://x:y@localhost/z alembic upgrade head --sql > /dev/null
+
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: {channel: stable, cache: true}
+      - run: flutter pub get
+      - name: Format (hand-written code only)
+        run: dart format --output=none --set-exit-if-changed $(find lib test -name '*.dart' ! -name '*.g.dart' ! -name 'app_localizations*.dart')
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter analyze
+      - run: flutter test
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: "17"}
+      - run: flutter build apk --release --dart-define=API_BASE_URL=https://staging.example.org
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jamii-pulse-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
+
+  images:
+    runs-on: ubuntu-latest
+    needs: [guard, python]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: |
+          docker build -f infra/docker/backend.Dockerfile -t jamii-pulse/backend:ci .
+          docker build -f infra/docker/model.Dockerfile -t jamii-pulse/model:ci .
+      - name: Compose file is valid
+        run: cp infra/.env.example infra/.env && docker compose -f infra/docker-compose.yml config -q

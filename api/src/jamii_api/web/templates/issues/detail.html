@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Issue #{{ issue.id }} · Jamii Pulse{% endblock %}
+{% block content %}
+<p class="small"><a href="/issues">← Issues</a></p>
+<h1>#{{ issue.id }} {{ issue.theme.label_en }} in {{ issue.ward }} <span class="pill {{ issue.status }}">{{ status_label(issue.status) }}</span></h1>
+<p class="sub">{{ issue.sub_county }}, {{ issue.county }} · held at {{ level_label(issue.level) }} level · {{ issue.report_count }} report{{ 's' if issue.report_count != 1 }} from {{ issue.first_reported_at.strftime('%d %b') }} to {{ issue.last_reported_at.strftime('%d %b %Y') }}
+  · owner: {{ issue.owner.name if issue.owner else 'nobody yet' }}</p>
+
+<div class="split">
+  <section class="card">
+    <h2>Evidence from CHPs</h2>
+    <p class="small muted">Names and numbers are removed. CHPs appear under a pseudonym; reports are never used to rank or discipline them.</p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>From</th><th>Received</th><th>What they reported</th></tr></thead>
+      <tbody>
+      {% for r in reports %}
+        <tr>
+          <td>#{{ r.id }}</td>
+          <td><span class="nowrap">{{ pseudonym(r.chp_id) }}</span><div class="small muted">{{ r.channel|upper }}</div></td>
+          <td class="num">{{ r.created_at.strftime('%d %b') }}</td>
+          <td>{% if r.readable_text %}{{ r.readable_text }}{% else %}<span class="muted">Category only</span>{% endif %}
+            {% if r.classification and r.classification.reviewed_by is none and r.classification.model_version %}<div class="small muted">Theme from {{ r.classification.model_version }}</div>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="card">
+      <h2>What has been done</h2>
+      {% if responses %}
+      <ol class="timeline">
+        {% for x in responses %}
+        <li><strong>{{ status_label(x.kind) }}</strong> · {{ x.officer.name }} · <span class="muted">{{ x.created_at.strftime('%d %b %Y %H:%M') }}</span>
+          <div>{{ x.action_text }}</div>
+          <div class="small muted">SMS to {{ x.recipients }} CHP{{ 's' if x.recipients != 1 }}{{ '' if x.sms_sent else ' · sending' }}</div></li>
+        {% endfor %}
+      </ol>
+      {% else %}<p class="muted">Nothing yet. The CHPs who reported this are waiting to hear back.</p>{% endif %}
+    </div>
+
+    {% if can_act_on(user, issue) and issue.status != 'resolved' %}
+    <div class="card" id="respond">
+      <h2>Respond</h2>
+      <form method="post" action="/issues/{{ issue.id }}/preview" data-respond>
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="radio-cards">
+          <label><input type="radio" name="kind" value="action_taken" checked><span><strong>Action taken</strong><br><span class="small muted">Something was done; tell CHPs what.</span></span></label>
+          <label><input type="radio" name="kind" value="resolved"><span><strong>Resolve</strong><br><span class="small muted">Close it, with or without action.</span></span></label>
+          {% if next_level %}<label><input type="radio" name="kind" value="escalated"><span><strong>Escalate to {{ level_label(next_level) }}</strong><br><span class="small muted">This needs someone with more authority.</span></span></label>{% endif %}
+        </div>
+        <div data-resolution hidden>
+          <label>Was the problem acted on?</label>
+          <label class="inline"><input type="radio" name="resolution" value="actioned" checked> Yes</label>
+          <label class="inline"><input type="radio" name="resolution" value="not_actioned"> No, and here is why</label>
+        </div>
+        <label for="action_text">Message for the CHPs</label>
+        <textarea id="action_text" name="action_text" maxlength="300" data-count="count" placeholder="Example: 200 packs of ORS delivered to Kawangware dispensary on 12 Oct."></textarea>
+        <p class="hint"><span id="count"></span>. Optional when escalating. You will see the exact SMS before it is sent.</p>
+        <div class="actions"><button type="submit">Preview SMS</button></div>
+      </form>
+    </div>
+    {% if not issue.owner_id or issue.owner_id != user.id %}
+    <form method="post" action="/issues/{{ issue.id }}/own"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary">Take ownership</button></form>
+    {% endif %}
+    {% elif issue.status != 'resolved' %}
+    <p class="small muted">Officers at the {{ level_label(issue.level) }} level or above in this area can answer this issue.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Report #{{ r.id }} · Review · Jamii Pulse{% endblock %}
+{% block content %}
+{% set from_q = request.query_params.get('from') %}
+<p class="small"><a href="/review{{ '?status=' ~ from_q if from_q else '' }}">← Review queue</a></p>
+<h1>Report #{{ r.id }} <span class="pill {{ r.status }}">{{ status_label(r.status) }}</span></h1>
+<p class="sub">{{ r.channel|upper }} from {{ pseudonym(r.chp_id) }} · {{ r.ward }}, {{ r.sub_county }} · received {{ r.created_at.strftime('%d %b %Y %H:%M') }} UTC</p>
+
+{% if r.status == 'needs_redaction' %}
+<div class="notice"><strong>Held for redaction.</strong> {{ r.hold_reason or 'Automatic redaction could not finish.' }} Remove any patient names, phone numbers, ID or household numbers before saving.</div>
+{% endif %}
+
+<div class="split">
+  <section class="card stack">
+    <div>
+      <h2>Evidence</h2>
+      {% if r.audio_key %}
+        <h3>Voice note</h3>
+        <audio controls preload="none" src="/audio/{{ r.id }}"></audio>
+        <p class="hint">Raw audio is deleted on {{ r.audio_expires_at.strftime('%d %b %Y') if r.audio_expires_at else 'schedule' }}. Plays are logged.</p>
+      {% endif %}
+      {% if r.raw_text and r.status != 'needs_redaction' %}
+        <h3>What the CHP wrote <span class="muted small">(redacted)</span></h3>
+        <pre class="evidence">{{ r.raw_text }}</pre>
+      {% endif %}
+      {% if r.transcript %}
+        <h3>Transcript <span class="muted small">{{ 'typed by a reviewer' if r.transcript.model_version == 'human' else r.transcript.model_version ~ (' · %.0f%% confident' % (r.transcript.confidence * 100) if r.transcript.confidence is not none else '') }}</span></h3>
+        {% if not in_queue %}<pre class="evidence">{{ r.transcript.text }}</pre>{% endif %}
+      {% endif %}
+      {% if not r.raw_text and not r.audio_key %}<p class="muted">The CHP only chose a category.</p>{% endif %}
+    </div>
+    <dl class="meta">
+      <dt>CHP chose</dt><dd>{{ (themes | selectattr('code', 'equalto', r.chp_theme_code) | map(attribute='label_en') | first) or '—' }}</dd>
+      {% if r.classification and r.classification.theme %}
+      <dt>Model suggests</dt><dd>{{ (themes | selectattr('code', 'equalto', r.classification.theme) | map(attribute='label_en') | first) or r.classification.theme }}
+        {% if r.classification.confidence is not none %}<span class="muted">({{ '%.0f%%' % (r.classification.confidence * 100) }}, {{ r.classification.model_version }})</span>{% endif %}</dd>
+      {% endif %}
+      <dt>Unit</dt><dd>{{ r.chp.chu.name }}</dd>
+      <dt>Language</dt><dd>{{ 'Kiswahili' if r.language == 'sw' else 'English' }}</dd>
+    </dl>
+  </section>
+
+  <section class="card">
+  {% if in_queue %}
+    <h2>Your decision</h2>
+    <form method="post" action="/review/{{ r.id }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="queue_status" value="{{ from_q or '' }}">
+      {% if r.status == 'needs_redaction' %}
+        <label for="text">Text, with personal details removed</label>
+        <textarea id="text" name="text" rows="6">{{ r.raw_text or '' }}</textarea>
+      {% endif %}
+      {% if r.audio_key or r.transcript %}
+        <label for="transcript">What the voice note says</label>
+        <textarea id="transcript" name="transcript" rows="6" placeholder="Type it in the language spoken. Leave out names and numbers.">{{ r.transcript.text if r.transcript else '' }}</textarea>
+        <p class="hint">Write [NAME] or [NUMBER] in place of any personal details you hear.</p>
+      {% endif %}
+
+      <label for="final_theme">Barrier theme</label>
+      <select id="final_theme" name="final_theme" required>
+        <option value="">Choose…</option>
+        {% for t in themes %}<option value="{{ t.code }}" {% if t.code == suggested %}selected{% endif %}>{{ t.label_en }} · {{ t.label_sw }}</option>{% endfor %}
+      </select>
+
+      <label>Group with</label>
+      <div class="radio-cards">
+        <label><input type="radio" name="grouping" value="auto" checked>
+          <span>{% if open_issue %}Matching open issue <a href="/issues/{{ open_issue.id }}">#{{ open_issue.id }}</a> ({{ open_issue.report_count }} reports){% else %}Matching open issue for this theme and ward, or a new one{% endif %}</span></label>
+        <label><input type="radio" name="grouping" value="new"><span>Start a separate new issue</span></label>
+      </div>
+      <div class="actions"><button type="submit">Save and next</button></div>
+    </form>
+  {% elif recheck %}
+    <h2>Weekly re-check</h2>
+    <p class="small muted">This report was accepted from the model without a person. Choose the theme you think is right; if it differs, the report moves to the right issue.</p>
+    <form method="post" action="/review/{{ r.id }}/recheck">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label for="final_theme">Barrier theme</label>
+      <select id="final_theme" name="final_theme" required>
+        <option value="">Choose…</option>
+        {% for t in themes %}<option value="{{ t.code }}">{{ t.label_en }} · {{ t.label_sw }}</option>{% endfor %}
+      </select>
+      <div class="actions"><button type="submit">Save re-check</button></div>
+    </form>
+  {% else %}
+    <h2>Already reviewed</h2>
+    {% if r.issue_id %}<p>This report is part of <a href="/issues/{{ r.issue_id }}">issue #{{ r.issue_id }}</a>.</p>{% endif %}
+  {% endif %}
+  </section>
+</div>
+{% endblock %}

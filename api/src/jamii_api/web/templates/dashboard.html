@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "_charts.html" import hbars, columns, table_view %}
+{% block title %}Dashboard · Jamii Pulse{% endblock %}
+{% block content %}
+<h1>What CHPs are reporting</h1>
+<p class="sub">
+  {% if user.role == 'cha' and user.chu %}{{ user.chu.name }} unit
+  {% elif user.sub_county %}{{ user.sub_county }} sub-county, {{ user.county }}
+  {% elif user.county %}{{ user.county }} county{% else %}All counties{% endif %}
+  · last {{ days }} days ·
+  {% for n in [30, 90, 365] %}<a href="/?days={{ n }}" {% if n == days %}aria-current="page"{% endif %}>{{ n }}d</a>{% if not loop.last %} · {% endif %}{% endfor %}
+</p>
+
+<div class="grid tiles">
+  <div class="card tile"><div class="label">Reports</div><div class="value">{{ '{:,}'.format(d.reports_total) }}</div><div class="note">withdrawn reports excluded</div></div>
+  <div class="card tile"><div class="label">Open issues</div><div class="value">{{ d.open_issues }}</div><div class="note">received, escalated or action taken</div></div>
+  <div class="card tile"><div class="label">Median days to first response</div><div class="value">{{ d.median_days_to_first_response if d.median_days_to_first_response is not none else '—' }}</div><div class="note">{{ d.responded_reports }} reports answered</div></div>
+  <div class="card tile"><div class="label">Issues with a recorded action</div><div class="value">{{ '%d%%' % (d.share_issues_with_action * 100) if d.share_issues_with_action is not none else '—' }}</div><div class="note">action taken, or resolved with action</div></div>
+  <div class="card tile"><div class="label">Waiting for review</div><div class="value">{{ d.review_queue }}</div><div class="note">needs a person before it counts</div></div>
+  <div class="card tile"><div class="label">Model agreement</div>
+    <div class="value">{{ '%d%%' % (d.recheck_agreement * 100) if d.recheck_agreement is not none else '—' }}</div>
+    <div class="note">{% if d.recheck_total %}{{ d.recheck_total }} weekly re-checks{% elif mode == 'manual' %}No AI in use: every report is tagged by a person{% else %}no re-checks yet{% endif %}</div>
+  </div>
+</div>
+
+<div class="grid two">
+  <section class="card">
+    <h2>Reports by barrier theme</h2>
+    {% if d.by_theme %}{{ hbars(d.by_theme, theme_label) }}{{ table_view(d.by_theme, 'Theme', theme_label) }}
+    {% else %}<p class="muted">No reports in this period.</p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>Reports per week</h2>
+    {% if d.by_week %}{{ columns(d.by_week) }}{{ table_view(d.by_week, 'Week starting') }}
+    {% else %}<p class="muted">No reports in this period.</p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>Reports by ward</h2>
+    {% if d.by_ward %}{{ hbars(d.by_ward) }}{{ table_view(d.by_ward, 'Ward') }}
+    {% else %}<p class="muted">No reports in this period.</p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>Issues by status</h2>
+    {{ hbars(d.issues_by_status.items() | list, status_label, 'issues') }}
+    <p class="small muted">Issues group reports about the same theme in the same ward. <a href="/issues">Open the issue list</a>.</p>
+  </section>
+</div>
+{% endblock %}

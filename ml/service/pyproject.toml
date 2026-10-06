@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jamii-ml-service"
+version = "0.1.0"
+description = "Jamii Pulse model service: the only place AI runs. Classifies, transcribes, redacts."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "python-multipart>=0.0.9",
+    "pyyaml>=6",
+    "scikit-learn>=1.5",
+    "joblib>=1.4",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+# Speech-to-text runs on CPU for small volumes; do not buy GPUs early.
+whisper = ["faster-whisper>=1.0"]
+ner = ["transformers>=4.44", "torch>=2.3"]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

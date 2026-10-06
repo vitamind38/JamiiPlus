@@ -1,0 +1,16 @@
+# Fill in a real receiver before launch. Alerts carry no personal data.
+route:
+  receiver: ops-email
+  group_by: [alertname]
+  group_wait: 1m
+  repeat_interval: 6h
+
+receivers:
+  - name: ops-email
+    email_configs:
+      - to: ops@example.org
+        from: alerts@example.org
+        smarthost: smtp.example.org:587
+        auth_username: alerts@example.org
+        auth_password: CHANGE_ME
+        send_resolved: true

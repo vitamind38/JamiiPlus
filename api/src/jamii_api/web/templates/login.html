@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Log in · Jamii Pulse{% endblock %}
+{% block content %}
+<div class="login card">
+  <h1>Log in</h1>
+  <p class="sub">For community health assistants, sub-county, county and national officers, and reviewers. We send a one-time code by SMS.</p>
+  {% if error %}<div class="flash error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/login">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="phone">Phone number</label>
+    <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0712 345 678" value="{{ phone or '' }}" required autofocus>
+    <div class="actions"><button type="submit">Send code</button></div>
+  </form>
+</div>
+{% endblock %}

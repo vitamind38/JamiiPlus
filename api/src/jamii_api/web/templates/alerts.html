@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Alerts · Jamii Pulse{% endblock %}
+{% block content %}
+<h1>Spike alerts</h1>
+<p class="sub">A sudden rise in one theme in one ward, compared with the previous eight weeks. An alert is only a prompt: an officer confirms or discards it, and nothing happens on its own.</p>
+{% if not enabled %}<div class="notice">Spike detection is off. It is switched on in phase 4, once there are enough reports per ward for a rise to mean something.</div>{% endif %}
+<div class="card">
+{% if alerts %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Theme</th><th>Ward</th><th class="num">Last 7 days</th><th class="num">Weekly average before</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for a in alerts %}
+      <tr>
+        <td>{{ a.theme.label_en }}</td>
+        <td>{{ a.ward }}<div class="small muted">{{ a.sub_county }}</div></td>
+        <td class="num">{{ a.count }}</td>
+        <td class="num">{{ '%.1f' % a.baseline }}</td>
+        <td><span class="pill {{ a.status }}">{{ a.status|capitalize }}</span></td>
+        <td>
+          {% if a.status == 'proposed' and user.role in ['cha','subcounty','county','national'] %}
+          <form method="post" action="/alerts/{{ a.id }}" class="row">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button name="decision" value="confirm">Confirm</button>
+            <button name="decision" value="discard" class="secondary">Discard</button>
+          </form>
+          {% endif %}
+          <a class="small" href="/issues?theme={{ a.theme_code }}&ward={{ a.ward|urlencode }}&status=all">See issues</a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% else %}<p class="muted">No alerts.</p>{% endif %}
+</div>
+{% endblock %}

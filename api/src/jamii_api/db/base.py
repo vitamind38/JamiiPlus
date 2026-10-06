@@ -51,6 +51,9 @@ class GeometryType(TypeDecorator):
 
     impl = Text
     cache_ok = True
+    # Read directly by GeoAlchemy2's DDL hooks; without them the lookup falls through to Text.
+    spatial_index = False  # the GIST index is declared on the model
+    use_typmod = None  # a plain geometry(GEOMETRY,4326) column, not one managed by AddGeometryColumn()
 
     def load_dialect_impl(self, dialect):
         if dialect is None:  # GeoAlchemy2's DDL hooks inspect column types with no dialect

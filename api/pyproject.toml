@@ -37,7 +37,7 @@ jamii = "jamii_api.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-jamii_api = ["web/templates/**/*.html", "web/static/*"]
+jamii_api = ["web/templates/**/*.html", "web/static/*", "web/static/img/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

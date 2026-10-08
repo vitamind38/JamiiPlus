@@ -53,6 +53,8 @@ class _LoginScreenState extends State<LoginScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            const Center(child: BrandMark()),
+            const SizedBox(height: 28),
             if (!_codeSent) ...[
               TextField(
                 controller: _phone,

@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Enter code · Jamii Pulse{% endblock %}
 {% block content %}
-<div class="login card">
+<div class="login-split card">
+  {% include "_login_art.html" %}
+  <div class="login-form">
   <h1>Enter your code</h1>
   <p class="sub">If {{ masked }} is registered, a 6-digit code is on its way. It expires in a few minutes.</p>
   {% if error %}<div class="flash error" role="alert">{{ error }}</div>{% endif %}
@@ -11,5 +13,6 @@
     <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus>
     <div class="actions"><button type="submit">Log in</button><a href="/login">Use another number</a></div>
   </form>
+  </div>
 </div>
 {% endblock %}

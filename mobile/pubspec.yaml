@@ -29,10 +29,24 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.35.1
   build_runner: ^2.16.1
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/brand/logo.png
+    - assets/illustrations/
+
+# Launcher icons from the logo drawn by scripts/brand_assets.py:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/brand/app_icon.png
+  adaptive_icon_background: "#2A78D6"
+  adaptive_icon_foreground: assets/brand/app_icon_foreground.png
+  remove_alpha_ios: true
 
 # build_runner 2.16.1 allows analyzer 14.5.0, which removed a setter it still uses.
 # Remove this once build_runner releases a fix (codegen only; nothing here ships in the app).

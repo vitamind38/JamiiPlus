@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Log in · Jamii Pulse{% endblock %}
 {% block content %}
-<div class="login card">
+<div class="login-split card">
+  {% include "_login_art.html" %}
+  <div class="login-form">
   <h1>Log in</h1>
   <p class="sub">For community health assistants, sub-county, county and national officers, and reviewers. We send a one-time code by SMS.</p>
   {% if error %}<div class="flash error" role="alert">{{ error }}</div>{% endif %}
@@ -21,5 +23,6 @@
     </tbody>
   </table>
   {% endif %}
+  </div>
 </div>
 {% endblock %}

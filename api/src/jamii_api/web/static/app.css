@@ -86,8 +86,10 @@ h3 { font-size: 0.95rem; margin: 0 0 8px; font-weight: 650; }
 /* Header */
 .top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding: 10px 24px;
   background: var(--surface); border-bottom: 1px solid var(--border); }
-.brand { font-weight: 700; color: var(--ink); text-decoration: none; font-size: 1.05rem; }
-.brand span { color: var(--accent); }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink);
+  text-decoration: none; font-size: 1.05rem; }
+.brand img { display: block; border-radius: 7px; }
+.brand b { color: var(--accent); font-weight: inherit; }
 .top nav { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
 .top nav a { color: var(--ink-2); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
 .top nav a:hover { background: var(--surface-2); color: var(--ink); }
@@ -201,8 +203,26 @@ button.link { background: none; color: var(--accent-ink); padding: 0; border: 0;
 .notice { border-left: 3px solid var(--accent); background: var(--accent-wash); padding: 10px 14px;
   border-radius: 0 6px 6px 0; margin-bottom: 16px; }
 
-/* Login */
-.login { max-width: 380px; margin: 8vh auto; }
+/* Login: illustration beside the form; a short banner on phones */
+.login-split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); max-width: 880px;
+  margin: 5vh auto; padding: 0; overflow: hidden; }
+.login-art { margin: 0; position: relative; min-height: 400px; background: #f4efe6; }
+.login-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 35%; }
+.login-art figcaption { position: absolute; left: 14px; right: 14px; bottom: 14px; padding: 10px 12px; border-radius: 8px;
+  background: rgba(11, 11, 11, 0.64); color: #fff; font-size: 0.92rem; line-height: 1.4; }
+.login-form { padding: 28px; }
+@media (max-width: 720px) {
+  .login-split { grid-template-columns: 1fr; margin: 0 auto; }
+  .login-art { min-height: 200px; }
+  .login-art img { object-position: center 30%; }
+  .login-art figcaption { display: none; }  /* would cover her face in the short banner */
+  .login-form { padding: 20px; }
+}
+
+/* Empty states */
+.empty-state { text-align: center; padding: 12px 8px 20px; }
+.empty-state img { display: block; width: min(300px, 80%); height: auto; margin: 0 auto 14px; border-radius: 12px; }
+.empty-state h2 { margin-bottom: 4px; }
 
 audio { width: 100%; margin-top: 4px; }
 .split { display: grid; gap: 16px; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }

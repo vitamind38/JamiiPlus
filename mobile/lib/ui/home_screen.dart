@@ -50,8 +50,17 @@ class HomeScreen extends StatelessWidget {
                   ),
                 if (reports.isEmpty && snap.hasData)
                   Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(t.emptyReports, textAlign: TextAlign.center),
+                    padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                    child: Column(
+                      children: [
+                        const SizedBox(
+                          width: 220,
+                          child: Illustration(Assets.reportPrompt, height: 220, fit: BoxFit.contain),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(t.emptyReports, textAlign: TextAlign.center),
+                      ],
+                    ),
                   ),
                 for (final r in reports) _ReportTile(report: r),
               ],

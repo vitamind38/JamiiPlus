@@ -4,13 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Jamii Pulse{% endblock %}</title>
+  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/img/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+  <meta name="theme-color" content="#2A78D6">
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/app.js" defer></script>
 </head>
 <body>
 {% if demo_mode() %}<div class="demo-banner" role="note"><strong>Demo with made-up data.</strong> Do not enter real names, phone numbers or reports. No SMS is sent.</div>{% endif %}
 <header class="top">
-  <a class="brand" href="/">Jamii <span>Pulse</span></a>
+  <a class="brand" href="/"><img src="/static/img/logo.svg" alt="" width="28" height="28"><span>Jamii <b>Pulse</b></span></a>
   {% if user %}
   {% set path = request.url.path %}
   <nav aria-label="Main">

@@ -20,6 +20,7 @@ class NoticeScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            if (!readOnly) ...[const Illustration(Assets.chpWalking, height: 190), const SizedBox(height: 20)],
             Text(t.noticeIntro, style: text.bodyLarge),
             const SizedBox(height: 16),
             Text(t.noticeWhatWeKeep, style: text.bodyLarge),

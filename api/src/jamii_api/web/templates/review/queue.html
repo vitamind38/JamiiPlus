@@ -33,7 +33,11 @@
   </table>
   </div>
 {% else %}
-  <p class="muted">Nothing waiting here.</p>
+  <div class="empty-state">
+    <img src="/static/img/all-caught-up.webp" alt="" width="440" height="330">
+    <h2>All caught up</h2>
+    <p class="muted">Nothing is waiting in this queue. New reports appear here as CHPs send them.</p>
+  </div>
 {% endif %}
 </div>
 {% endblock %}

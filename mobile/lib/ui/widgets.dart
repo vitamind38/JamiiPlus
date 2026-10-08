@@ -63,3 +63,40 @@ class StatusChip extends StatelessWidget {
     );
   }
 }
+
+/// Bundled images: illustrations made with Higgsfield, compressed to small WebP files, and
+/// the logo drawn by scripts/brand_assets.py.
+abstract final class Assets {
+  static const logo = 'assets/brand/logo.png';
+  static const chpWalking = 'assets/illustrations/chp_walking.webp';
+  static const reportPrompt = 'assets/illustrations/report_prompt.webp';
+}
+
+/// A decorative illustration with rounded corners. Screen readers skip it.
+class Illustration extends StatelessWidget {
+  const Illustration(this.asset, {super.key, this.height = 180, this.fit = BoxFit.cover});
+  final String asset;
+  final double height;
+  final BoxFit fit;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(12),
+    child: Image.asset(asset, height: height, width: double.infinity, fit: fit, excludeFromSemantics: true),
+  );
+}
+
+class BrandMark extends StatelessWidget {
+  const BrandMark({super.key, this.size = 48});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Image.asset(Assets.logo, width: size, height: size, excludeFromSemantics: true),
+      const SizedBox(width: 12),
+      Text('Jamii Pulse', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+    ],
+  );
+}

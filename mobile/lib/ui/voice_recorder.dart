@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -106,6 +107,13 @@ class _VoiceRecorderState extends State<VoiceRecorder> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    if (kIsWeb) {
+      return ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.mic_off_outlined),
+        title: Text(t.voiceNotOnWeb),
+      );
+    }
     if (_recording) {
       return Row(
         children: [

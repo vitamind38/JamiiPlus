@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../app.dart';
@@ -70,7 +71,7 @@ class _ReportScreenState extends State<ReportScreen> {
             const SizedBox(height: 24),
             Text(t.voiceNote, style: text.titleMedium),
             const SizedBox(height: 4),
-            Text(t.voiceTip, style: text.bodySmall),
+            if (!kIsWeb) Text(t.voiceTip, style: text.bodySmall),
             const SizedBox(height: 8),
             VoiceRecorder(controller: widget.recorder, onChanged: (path) => _audioPath = path),
             const SizedBox(height: 24),

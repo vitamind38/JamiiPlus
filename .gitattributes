@@ -5,3 +5,7 @@
 *.yaml text eol=lf
 Caddyfile text eol=lf
 *.png binary
+*.wasm binary
+*.webp binary
+mobile/web/drift_worker.js -diff linguist-vendored
+mobile/web/sqlite3.wasm linguist-vendored

@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _code = TextEditingController();
   bool _codeSent = false;
   bool _busy = false;
+  String? _devCode; // only from a local or demo server
   String? _error;
 
   @override
@@ -68,13 +69,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: _busy
                     ? null
                     : () => _run(() async {
-                        await state.requestCode(_phone.text);
-                        setState(() => _codeSent = true);
+                        final devCode = await state.requestCode(_phone.text);
+                        setState(() {
+                          _codeSent = true;
+                          _devCode = devCode;
+                        });
                       }),
                 child: Text(t.sendCode),
               ),
             ] else ...[
               Text(t.codeSentTo(_phone.text)),
+              if (_devCode != null) ...[
+                const SizedBox(height: 12),
+                NoPatientNamesBanner(text: t.devCode(_devCode!), icon: Icons.science_outlined),
+              ],
               const SizedBox(height: 16),
               TextField(
                 controller: _code,

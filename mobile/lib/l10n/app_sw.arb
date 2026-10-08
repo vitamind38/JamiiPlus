@@ -64,5 +64,7 @@
   "errorNoNetwork": "Hakuna mtandao. Jaribu tena ukiwa na mtandao.",
   "updateApp": "Ilani ya faragha imebadilika. Tafadhali sasisha programu kupitia CHA wako.",
   "categoryOnly": "Aina tu",
-  "reportedOn": "Iliripotiwa {date}"
+  "reportedOn": "Iliripotiwa {date}",
+  "devCode": "Seva ya majaribio: nambari yako ni {code}. Seva halisi huituma kwa SMS.",
+  "voiceNotOnWeb": "Ujumbe wa sauti unafanya kazi kwenye programu ya simu. Hapa chagua aina ya tatizo na uandike maneno machache."
 }

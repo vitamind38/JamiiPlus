@@ -26,6 +26,25 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 `python scripts/dev_server.py` from the repository root. Debug builds allow plain HTTP;
 release builds need HTTPS.
 
+## Preview in a browser (no phone or emulator needed)
+
+The same app builds for Chrome, against the local API:
+
+```bash
+python scripts/dev_server.py                 # from the repository root: API + synthetic data on :8000
+cd mobile
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8000
+```
+
+Log in as a test CHP from the synthetic data: **0710 000 000** to **0710 000 008**. The local
+server sends no SMS, so the app shows the code on screen. The local API accepts browser
+calls from any `http://localhost` port; elsewhere, list origins in `JAMII_CORS_ORIGINS`.
+
+In the browser, SQLite runs as WebAssembly (`web/sqlite3.wasm`, `web/drift_worker.js`, both
+from the drift 2.35.2 release; replace them together when upgrading drift). Voice notes are
+phone-only: the browser shows a note instead of the record button. The web build is for
+previewing the UI; CHPs use the Android app.
+
 ## Test
 
 ```bash

@@ -3,6 +3,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -56,6 +57,16 @@ def create_app() -> FastAPI:
         https_only=settings.environment != "local",
     )
     app.middleware("http")(health.metrics_middleware)
+    if settings.cors_origins or settings.environment == "local":
+        # The CHP API authenticates with a Bearer token, never cookies, so no credentials here.
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.cors_origins,
+            allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?" if settings.environment == "local" else None,
+            allow_methods=["GET", "POST", "PATCH"],
+            allow_headers=["Authorization", "Content-Type"],
+            allow_credentials=False,
+        )
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):

@@ -87,6 +87,12 @@ def build_brand() -> None:
     # Android adaptive icon foreground: glyph only, inside the 66% safe zone.
     png(1024, background=False, glyph_scale=0.62).save(brand / "app_icon_foreground.png", optimize=True)
     png(256).save(brand / "logo.png", optimize=True)
+    # Flutter web build (the app in a browser): favicon and PWA icons.
+    web = ROOT / "mobile" / "web"
+    png(32).save(web / "favicon.png", optimize=True)
+    for size in (192, 512):
+        png(size).save(web / "icons" / f"Icon-{size}.png", optimize=True)
+        png(size, rounded=False, glyph_scale=0.8).save(web / "icons" / f"Icon-maskable-{size}.png", optimize=True)
 
 
 def build_illustrations(sources: Path) -> None:

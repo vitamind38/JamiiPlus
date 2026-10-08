@@ -15,8 +15,9 @@ class LanguageToggle extends StatelessWidget {
 }
 
 class NoPatientNamesBanner extends StatelessWidget {
-  const NoPatientNamesBanner({super.key, required this.text});
+  const NoPatientNamesBanner({super.key, required this.text, this.icon = Icons.privacy_tip_outlined});
   final String text;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +27,7 @@ class NoPatientNamesBanner extends StatelessWidget {
       decoration: BoxDecoration(color: scheme.tertiaryContainer, borderRadius: BorderRadius.circular(8)),
       child: Row(
         children: [
-          Icon(Icons.privacy_tip_outlined, color: scheme.onTertiaryContainer),
+          Icon(icon, color: scheme.onTertiaryContainer),
           const SizedBox(width: 12),
           Expanded(
             child: Text(text, style: TextStyle(color: scheme.onTertiaryContainer)),

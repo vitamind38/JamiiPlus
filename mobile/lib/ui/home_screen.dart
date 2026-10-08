@@ -82,15 +82,19 @@ class _ReportTile extends StatelessWidget {
     final state = AppScope.of(context);
     final title = report.themeCode != null ? state.themeLabel(report.themeCode) : t.voiceNote;
     final date = DateFormat.yMMMd(state.language).format(report.createdAt.toLocal());
+    // The status sits under the text, so titles keep the full width on small phones.
     return ListTile(
       leading: Icon(report.hasAudio || report.audioPath != null ? Icons.mic_none : Icons.notes),
       title: Text(title),
-      subtitle: Text(
-        [date, if (report.body != null) report.body!].join(' · '),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
+      isThreeLine: true,
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text([date, if (report.body != null) report.body!].join(' · '), maxLines: 2, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 6),
+          StatusChip(status: report.status, syncState: report.syncState),
+        ],
       ),
-      trailing: StatusChip(status: report.status, syncState: report.syncState),
       onTap: () =>
           Navigator.push(context, MaterialPageRoute(builder: (_) => ReportDetailScreen(clientId: report.clientId))),
     );

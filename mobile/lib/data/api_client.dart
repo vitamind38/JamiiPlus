@@ -161,7 +161,11 @@ class ApiClient {
     };
   });
 
-  Future<void> requestCode(String phone) => _json('POST', '/auth/otp/request', {'phone': phone});
+  /// Returns the code itself only from a local or demo server, which never sends a real SMS.
+  Future<String?> requestCode(String phone) async {
+    final j = await _json('POST', '/auth/otp/request', {'phone': phone});
+    return j is Map ? j['dev_code'] as String? : null;
+  }
 
   Future<(String, Me)> verifyCode(String phone, String code) async {
     final j = await _json('POST', '/auth/otp/verify', {'phone': phone, 'code': code}) as Map<String, dynamic>;

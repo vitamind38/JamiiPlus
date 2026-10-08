@@ -81,6 +81,7 @@ class _JamiiPulseAppState extends State<JamiiPulseApp> with WidgetsBindingObserv
           ),
           darkTheme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
+            inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
           ),
           home: switch (widget.state.phase) {
             Phase.loading => const Scaffold(body: Center(child: CircularProgressIndicator())),

@@ -172,3 +172,20 @@ def test_health_and_metrics(client):
     assert client.get("/readyz").json()["database"] is True
     body = client.get("/metrics").text
     assert "jamii_review_queue" in body and "jamii_http_requests_total" in body
+
+
+def test_cors_allows_local_flutter_web_only(client):
+    ok = client.options(
+        "/api/v1/themes",
+        headers={
+            "Origin": "http://localhost:8686",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "authorization",
+        },
+    )
+    assert ok.headers.get("access-control-allow-origin") == "http://localhost:8686"
+    assert "access-control-allow-credentials" not in ok.headers
+    bad = client.options(
+        "/api/v1/themes", headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "GET"}
+    )
+    assert "access-control-allow-origin" not in bad.headers

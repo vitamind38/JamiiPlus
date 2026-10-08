@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Separate key for pseudonyms so rotating the session key does not change how CHPs appear.
     pseudonym_key: str = Field(default="dev-only-pseudonym-key-change-me-too", min_length=32)
     base_url: str = "http://localhost:8000"
+    # Browser origins allowed to call the CHP API (the Flutter app built for the web), as a
+    # JSON list. Local development also allows any http://localhost port.
+    cors_origins: list[str] = []
 
     # DATABASE_URL is what hosted Postgres providers (Neon on Vercel) inject; JAMII_ wins if both are set.
     database_url: str = Field(

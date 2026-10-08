@@ -82,3 +82,14 @@ def test_bootstrap_loads_demo_data_once(demo_on, db):
 def test_bootstrap_does_nothing_outside_demo(db):
     assert demo.bootstrap() is None
     assert db.query(Report).count() == 0
+
+
+def test_demo_replies_are_never_in_the_future(db):
+    from jamii_api.db.base import utcnow
+    from jamii_api.models import Response
+    from jamii_api.seed import demo_data
+
+    demo_data(db)
+    db.commit()
+    assert db.query(Response).count() > 0
+    assert all(r.created_at <= utcnow() for r in db.query(Response))

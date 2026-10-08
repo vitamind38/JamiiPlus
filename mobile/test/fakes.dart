@@ -21,8 +21,13 @@ class FakeApi implements ApiClient {
     currentConsentVersion: '2026-10-v1',
   );
 
+  String? devCode;
+
   @override
-  Future<void> requestCode(String phone) async => calls.add('requestCode $phone');
+  Future<String?> requestCode(String phone) async {
+    calls.add('requestCode $phone');
+    return devCode;
+  }
 
   @override
   Future<(String, Me)> verifyCode(String phone, String code) async {

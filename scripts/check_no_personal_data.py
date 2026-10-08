@@ -18,6 +18,9 @@ SYNTHETIC = re.compile(
 SECRET = re.compile(r"(?i)(api[_-]?key|secret|password|token)\s*[=:]\s*['\"]?[A-Za-z0-9_\-]{24,}")
 BANNED_FILES = re.compile(r"(^|/)(\.env|.*\.dump(\.age)?|.*\.sql\.gz|.*\.csv|.*\.m4a|.*\.wav|.*\.amr|.*\.db)$")
 ALLOWED_FILES = {"infra/.env.example"}
+# Third-party builds committed as-is (Drift's web worker and SQLite for the browser); their
+# minified numeric constants look like phone numbers.
+VENDORED = {"mobile/web/drift_worker.js", "mobile/web/sqlite3.wasm"}
 SKIP_SUFFIXES = {".png", ".jpg", ".ico", ".lock", ".jar", ".ttf", ".woff2"}
 
 
@@ -31,7 +34,7 @@ def tracked() -> list[str]:
 def main() -> int:
     problems = []
     for rel in tracked():
-        if rel in ALLOWED_FILES:
+        if rel in ALLOWED_FILES or rel in VENDORED:
             continue
         if BANNED_FILES.search(rel):
             problems.append(f"{rel}: this kind of file must not be committed (env, dumps, audio, data)")

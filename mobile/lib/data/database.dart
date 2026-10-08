@@ -49,7 +49,15 @@ class CachedThemes extends Table {
 
 @DriftDatabase(tables: [LocalReports, CachedThemes])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor]) : super(executor ?? driftDatabase(name: 'jamii_pulse'));
+  AppDatabase([QueryExecutor? executor])
+    : super(
+        executor ??
+            driftDatabase(
+              name: 'jamii_pulse',
+              // In a browser, SQLite runs as WebAssembly in a worker; both files live in web/.
+              web: DriftWebOptions(sqlite3Wasm: Uri.parse('sqlite3.wasm'), driftWorker: Uri.parse('drift_worker.js')),
+            ),
+      );
 
   @override
   int get schemaVersion => 1;

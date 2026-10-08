@@ -364,7 +364,7 @@ def demo_data(db: Session, reports_per_chp: int = 6, seed: int = 7) -> dict[str,
     for issue in db.scalars(select(Issue).where(Issue.status == IssueStatus.RECEIVED).order_by(Issue.id)):
         if rng.random() < 0.5:
             continue
-        at = issue.last_reported_at + timedelta(days=rng.randint(1, 9))
+        at = min(issue.last_reported_at + timedelta(days=rng.randint(1, 9)), now)  # never in the future
         resolved = rng.random() < 0.4
         db.add(
             Response(

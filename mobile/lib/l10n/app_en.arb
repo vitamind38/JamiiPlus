@@ -18,7 +18,13 @@
   "sendCode": "Send code",
   "codeLabel": "Code from SMS",
   "codeSentTo": "We sent a 6-digit code by SMS to {phone}.",
-  "@codeSentTo": {"placeholders": {"phone": {"type": "String"}}},
+  "@codeSentTo": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
   "logIn": "Log in",
   "useAnotherNumber": "Use another number",
   "homeTitle": "My reports",
@@ -31,9 +37,21 @@
   "recordAgain": "Record again",
   "deleteRecording": "Delete",
   "recordingSeconds": "Recording… {seconds} s",
-  "@recordingSeconds": {"placeholders": {"seconds": {"type": "int"}}},
+  "@recordingSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "recordedSeconds": "Voice note, {seconds} s",
-  "@recordedSeconds": {"placeholders": {"seconds": {"type": "int"}}},
+  "@recordedSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "voiceTip": "About 30 seconds is enough. Say what is wrong, where, and since when.",
   "describeOptional": "Add a few words (optional)",
   "send": "Send",
@@ -62,13 +80,43 @@
   "privacyNotice": "Privacy notice",
   "logOut": "Log out",
   "yourCodeName": "Supervisors see your reports as {code}.",
-  "@yourCodeName": {"placeholders": {"code": {"type": "String"}}},
+  "@yourCodeName": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "unit": "Unit: {unit}, {ward}",
-  "@unit": {"placeholders": {"unit": {"type": "String"}, "ward": {"type": "String"}}},
+  "@unit": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      },
+      "ward": {
+        "type": "String"
+      }
+    }
+  },
   "errorGeneric": "Something went wrong. Try again.",
   "errorNoNetwork": "No network. Try again when you are connected.",
   "updateApp": "The privacy notice has changed. Please update the app from your CHA.",
   "categoryOnly": "Category only",
   "reportedOn": "Reported {date}",
-  "@reportedOn": {"placeholders": {"date": {"type": "String"}}}
+  "@reportedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "devCode": "Test server: your code is {code}. A real server sends it by SMS.",
+  "@devCode": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceNotOnWeb": "Voice notes work in the phone app. Here you can choose a category and type a few words."
 }

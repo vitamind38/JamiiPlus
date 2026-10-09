@@ -1,12 +1,14 @@
 """Liveness, readiness and Prometheus metrics (queue depth, failed SMS, model agreement)."""
 
+import hmac
 import time
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, Counter, Histogram, generate_latest
 from prometheus_client.core import GaugeMetricFamily
 from sqlalchemy import func, select, text
 
+from jamii_api.config import get_settings
 from jamii_api.db import get_sessionmaker
 from jamii_api.models import HUMAN_QUEUES, Report, ReportStatus, SmsOutbox
 from jamii_api.services.stats import agreement_rate
@@ -77,5 +79,9 @@ def readyz(response: Response):
 
 
 @router.get("/metrics")
-def metrics():
+def metrics(request: Request):
+    # On the Kenyan server Caddy keeps /metrics internal; on public hosting a token does.
+    token = get_settings().metrics_token
+    if token and not hmac.compare_digest(request.headers.get("authorization", ""), f"Bearer {token}"):
+        raise HTTPException(404)
     return Response(generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)

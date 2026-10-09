@@ -50,14 +50,39 @@ Open http://localhost:8000 and log in as a demo officer: `0700 000 004` (county)
 `0700 000 001` (admin). The one-time code appears on the page in local development. Data is
 synthetic; SMS are printed to the console.
 
-## Public demo on Vercel (synthetic data only)
+## Test deployment: Vercel + Supabase
 
-`api/` also deploys to Vercel as a clickable demo of the officer web app: Vercel project root
-`api/`, entrypoint `api/vercel_app.py`, functions in Frankfurt next to a Neon Postgres
-database. With `JAMII_DEMO_MODE=true` the app refuses to start unless SMS is in console mode,
-shows a "made-up data" banner and the demo logins, and puts one-time codes on screen. Each
-cold start migrates and loads the synthetic data once. Vercel has no Kenyan region and cannot
-run the workers, so **the demo must never hold real CHP data**; the pilot runs on the stack below.
+Supabase is the backend and Vercel only hosts. `api/` deploys to Vercel (project root `api/`,
+entrypoint `api/vercel_app.py`, functions in Dublin). Supabase holds the data in Postgres with
+PostGIS, and voice notes in a private Storage bucket, `voice-notes`. Both are in Supabase's
+eu-west-1 region (Ireland).
+
+1. **Connect the Supabase project to the Vercel project** with Supabase's Vercel integration
+   (remove any other database integration first). It sets `POSTGRES_URL` (transaction
+   pooler, used by the app), `POSTGRES_URL_NON_POOLING` (migrations), and `SUPABASE_URL` and
+   `SUPABASE_SECRET_KEY` (Storage). `JAMII_DATABASE_URL`, `JAMII_MIGRATION_DATABASE_URL`,
+   `JAMII_SUPABASE_URL` and `JAMII_SUPABASE_SECRET_KEY` override them.
+2. **Settings:** `JAMII_ENVIRONMENT=staging`, `JAMII_AUTO_MIGRATE=true` (each cold start runs
+   Alembic under a lock and loads the themes), `JAMII_STORAGE_BACKEND=supabase`,
+   `JAMII_QUEUE_ENABLED=false`, `JAMII_PIPELINE_MODE=manual` and `JAMII_METRICS_TOKEN`, plus
+   `JAMII_SECRET_KEY`, `JAMII_PSEUDONYM_KEY` and `JAMII_CHANNEL_CALLBACK_TOKEN`.
+3. **First admin:** set `JAMII_BOOTSTRAP_ADMIN_PHONE` (and `JAMII_BOOTSTRAP_ADMIN_NAME`) and
+   redeploy. The next cold start creates that admin if no admin exists yet. Add everyone
+   else in Admin.
+4. **SMS:** with `JAMII_SMS_BACKEND=console`, messages go to the Vercel runtime log with the
+   phone number masked. That is enough for the admin's first login code, but not for
+   testers. Before inviting testers, set `JAMII_SMS_BACKEND=africastalking`,
+   `JAMII_AT_USERNAME`, `JAMII_AT_API_KEY` and `JAMII_AT_SANDBOX=false`, then switch to
+   `JAMII_ENVIRONMENT=production`, which refuses console SMS.
+
+The migrations turn on row-level security for every table and revoke the `anon` and
+`authenticated` grants, so Supabase's public REST API exposes nothing. The app connects as
+the tables' owner. Vercel does not run the Celery workers, so this deployment has no
+scheduled retention purge, SMS retries, stuck-report sweep or spike detection.
+
+**Data location:** Supabase has no African region. Kenya's Data Protection Act restricts
+moving personal data abroad, so tell testers their data is stored in Ireland and get their
+consent. Real CHP reports belong on the Kenyan stack below.
 
 ## Run the real stack
 

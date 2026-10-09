@@ -73,15 +73,28 @@ def test_dashboard_views_query(pg, db):
 
 
 def test_demo_bootstrap_migrates_and_seeds_once(pg, db, monkeypatch):
-    from jamii_api import demo
+    from jamii_api import bootstrap
     from jamii_api.config import get_settings
     from jamii_api.models import Report
 
     monkeypatch.setattr(get_settings(), "demo_mode", True)
-    first = demo.bootstrap()  # takes the advisory lock, runs Alembic, loads demo data
+    first = bootstrap.bootstrap()  # takes the advisory lock, runs Alembic, loads demo data
     assert first and first["reports"] > 0
-    assert demo.bootstrap() == {}  # a second cold start changes nothing
+    assert "reports" not in bootstrap.bootstrap()  # a second cold start changes nothing
     assert db.query(Report).count() == first["reports"]
     engine, _ = pg
     with engine.connect() as conn:
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0002"
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0003"
+
+
+def test_bootstrap_falls_back_when_the_migration_url_is_unreachable(pg, db, monkeypatch):
+    from jamii_api import bootstrap
+    from jamii_api.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "auto_migrate", True)
+    monkeypatch.setattr(s, "migration_database_url", "postgresql+psycopg://x:y@127.0.0.1:1/nowhere")
+    assert bootstrap.bootstrap()["themes_added"] == 9  # migrated and seeded over the app's URL
+    engine, _ = pg
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0003"

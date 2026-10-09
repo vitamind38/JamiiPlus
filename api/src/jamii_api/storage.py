@@ -1,10 +1,14 @@
-"""Voice-note storage. MinIO (S3-compatible, Kenya-hosted) in deployments; a local folder in tests."""
+"""Voice-note storage. MinIO (S3-compatible, Kenya-hosted) on the Kenyan server, Supabase
+Storage on the Vercel deployment, a local folder in tests."""
 
 import io
 import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
+from urllib.parse import quote
+
+import httpx
 
 from jamii_api.config import get_settings
 
@@ -99,9 +103,73 @@ class MinioAudioStore:
             return False
 
 
+class SupabaseAudioStore:
+    """Supabase Storage through its REST API. The bucket is private and has no policies, so only
+    this server's secret key can read or write it."""
+
+    def __init__(
+        self, url: str, key: str, bucket: str, max_bytes: int, transport: httpx.BaseTransport | None = None
+    ) -> None:
+        if not url or not key:
+            raise RuntimeError("Supabase storage needs SUPABASE_URL and SUPABASE_SECRET_KEY")
+        headers = {"apikey": key}
+        if key.startswith("eyJ"):  # a legacy service_role JWT; the newer sb_secret_ keys go in apikey only
+            headers["Authorization"] = f"Bearer {key}"
+        self.bucket = bucket
+        self.max_bytes = max_bytes
+        self.http = httpx.Client(
+            base_url=f"{url.rstrip('/')}/storage/v1", headers=headers, timeout=20, transport=transport
+        )
+        self._bucket_ready = False
+
+    def _object(self, key: str) -> str:
+        return f"/object/{self.bucket}/{quote(key, safe='/')}"
+
+    def _ensure_bucket(self) -> None:
+        if self._bucket_ready:
+            return
+        if self.http.get(f"/bucket/{self.bucket}").status_code != 200:
+            r = self.http.post(
+                "/bucket",
+                json={
+                    "id": self.bucket,
+                    "name": self.bucket,
+                    "public": False,
+                    "file_size_limit": self.max_bytes,
+                    "allowed_mime_types": sorted(ALLOWED_AUDIO),
+                },
+            )
+            if r.status_code != 200 and "already exists" not in r.text:
+                r.raise_for_status()
+        self._bucket_ready = True
+
+    def put(self, key: str, data: bytes, mime: str) -> None:
+        self._ensure_bucket()
+        r = self.http.post(self._object(key), content=data, headers={"Content-Type": mime, "x-upsert": "false"})
+        r.raise_for_status()
+
+    def get(self, key: str) -> bytes:
+        r = self.http.get(self._object(key))
+        r.raise_for_status()
+        return r.content
+
+    def delete(self, key: str) -> None:
+        # The bulk endpoint succeeds when the object is already gone, like the other stores.
+        self.http.request("DELETE", f"/object/{self.bucket}", json={"prefixes": [key]}).raise_for_status()
+
+    def ping(self) -> bool:
+        try:
+            self._ensure_bucket()
+            return True
+        except Exception:
+            return False
+
+
 @lru_cache
 def get_audio_store() -> AudioStore:
     s = get_settings()
     if s.storage_backend == "local":
         return LocalAudioStore(s.storage_local_dir)
+    if s.storage_backend == "supabase":
+        return SupabaseAudioStore(s.supabase_url, s.supabase_secret_key, s.supabase_bucket, s.max_audio_bytes)
     return MinioAudioStore()

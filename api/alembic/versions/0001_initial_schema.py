@@ -20,7 +20,21 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE EXTENSION IF NOT EXISTS postgis")
+    # Supabase keeps extensions in their own schema (on its search path); plain Postgres uses public.
+    op.execute(
+        """
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+            IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'extensions') THEN
+              CREATE EXTENSION postgis WITH SCHEMA extensions;
+            ELSE
+              CREATE EXTENSION postgis;
+            END IF;
+          END IF;
+        END $$;
+        """
+    )
     op.create_table(
         "community_health_unit",
         sa.Column("id", sa.Integer(), nullable=False),

@@ -2,6 +2,7 @@
 
 from enum import StrEnum
 from functools import lru_cache
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -14,11 +15,20 @@ class PipelineMode(StrEnum):
     ASSISTED = "assisted"
 
 
+# Query parameters some providers add for other client libraries; libpq rejects them.
+_FOREIGN_URL_PARAMS = {"supa", "pgbouncer", "workaround"}
+
+
 def with_psycopg_driver(url: str) -> str:
     """Providers hand out postgres:// or postgresql:// URLs; SQLAlchemy needs the driver named."""
     for prefix in ("postgres://", "postgresql://"):
         if url.startswith(prefix):
-            return "postgresql+psycopg://" + url[len(prefix) :]
+            url = "postgresql+psycopg://" + url[len(prefix) :]
+            break
+    parts = urlsplit(url)
+    if parts.query:
+        kept = [(k, v) for k, v in parse_qsl(parts.query) if k not in _FOREIGN_URL_PARAMS]
+        url = urlunsplit(parts._replace(query=urlencode(kept)))
     return url
 
 
@@ -34,23 +44,46 @@ class Settings(BaseSettings):
     # JSON list. Local development also allows any http://localhost port.
     cors_origins: list[str] = []
 
-    # DATABASE_URL is what hosted Postgres providers (Neon on Vercel) inject; JAMII_ wins if both are set.
+    # Hosted Postgres injects its own names: POSTGRES_URL (Supabase's Vercel integration, the
+    # transaction pooler) or DATABASE_URL. A JAMII_ variable always wins.
     database_url: str = Field(
         default="postgresql+psycopg://jamii:jamii@localhost:5432/jamii",
-        validation_alias=AliasChoices("JAMII_DATABASE_URL", "DATABASE_URL"),
+        validation_alias=AliasChoices("JAMII_DATABASE_URL", "POSTGRES_URL", "DATABASE_URL"),
     )
     # The audit log lives in its own database so nobody editing reports can edit the trail.
-    # (The Vercel demo has one database, so there it shares DATABASE_URL.)
+    # On a single hosted database (Supabase on Vercel) it shares the main one.
     audit_database_url: str = Field(
         default="postgresql+psycopg://jamii_audit:jamii_audit@localhost:5432/jamii_audit",
-        validation_alias=AliasChoices("JAMII_AUDIT_DATABASE_URL", "DATABASE_URL"),
+        validation_alias=AliasChoices("JAMII_AUDIT_DATABASE_URL", "POSTGRES_URL", "DATABASE_URL"),
     )
+    # Migrations take a session-level lock, so they need a session (not transaction) pooler or a
+    # direct connection: Supabase's POSTGRES_URL_NON_POOLING (port 5432).
+    migration_database_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "JAMII_MIGRATION_DATABASE_URL", "POSTGRES_URL_NON_POOLING", "DATABASE_URL_UNPOOLED"
+        ),
+    )
+    # Serverless hosting has no release step: migrate on cold start, under a lock.
+    auto_migrate: bool = False
+    # Creates the first admin on start-up if there is no admin yet. Everyone else is added in Admin.
+    bootstrap_admin_phone: str = ""
+    bootstrap_admin_name: str = "Administrator"
+    # If set, /metrics needs "Authorization: Bearer <token>" (for hosts without a private network).
+    metrics_token: str = ""
     redis_url: str = "redis://localhost:6379/0"
     # When false (or Redis is unreachable) the API does the work inline instead of queueing it.
     queue_enabled: bool = True
 
-    storage_backend: str = "minio"  # minio | local
+    storage_backend: str = "minio"  # minio | supabase | local
     storage_local_dir: str = "./var/audio"
+    # Supabase Storage (the Vercel deployment). Supabase's Vercel integration sets the URL and key.
+    supabase_url: str = Field(default="", validation_alias=AliasChoices("JAMII_SUPABASE_URL", "SUPABASE_URL"))
+    supabase_secret_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("JAMII_SUPABASE_SECRET_KEY", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY"),
+    )
+    supabase_bucket: str = "voice-notes"
     minio_endpoint: str = "localhost:9000"
     minio_access_key: str = "jamii"
     minio_secret_key: str = "jamii-dev-secret"
@@ -101,10 +134,10 @@ class Settings(BaseSettings):
     # logins, puts one-time codes on screen, and never sends a real SMS.
     demo_mode: bool = False
 
-    @field_validator("database_url", "audit_database_url")
+    @field_validator("database_url", "audit_database_url", "migration_database_url")
     @classmethod
-    def _psycopg_driver(cls, url: str) -> str:
-        return with_psycopg_driver(url)
+    def _psycopg_driver(cls, url: str | None) -> str | None:
+        return with_psycopg_driver(url) if url else url
 
     @property
     def is_production(self) -> bool:
@@ -126,6 +159,10 @@ class Settings(BaseSettings):
                 raise RuntimeError("JAMII_DEMO_MODE is never allowed in production")
             if self.sms_backend != "console":
                 raise RuntimeError("A demo never sends real SMS: set JAMII_SMS_BACKEND=console")
+        if self.is_production and self.sms_backend == "console":
+            raise RuntimeError("Production sends real SMS: set JAMII_SMS_BACKEND=africastalking")
+        if self.sms_backend == "africastalking" and not self.at_api_key and self.environment != "local":
+            raise RuntimeError("Set JAMII_AT_USERNAME and JAMII_AT_API_KEY to send SMS through Africa's Talking")
 
 
 @lru_cache

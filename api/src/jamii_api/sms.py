@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from jamii_api.config import get_settings
 from jamii_api.db.base import utcnow
 from jamii_api.models import SmsOutbox
+from jamii_api.security import mask_phone
 
 log = logging.getLogger("jamii.sms")
 
@@ -37,13 +38,14 @@ class SmsBackend(Protocol):
 
 
 class ConsoleBackend:
-    """Prints messages instead of sending them. Local development and tests only."""
+    """Logs messages instead of sending them: local development, tests, and staging before an SMS
+    account exists (an operator reads their first login code from the server log)."""
 
     sent: list[tuple[str, str]] = []
 
     def send(self, phone: str, message: str) -> SendResult:
         ConsoleBackend.sent.append((phone, message))
-        log.info("SMS to %s: %s", phone, message)
+        log.info("SMS to %s: %s", mask_phone(phone), message)
         return SendResult(ok=True, provider_id=f"console-{len(ConsoleBackend.sent)}")
 
 

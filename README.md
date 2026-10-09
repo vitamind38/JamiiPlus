@@ -74,11 +74,24 @@ eu-west-1 region (Ireland).
    testers. Before inviting testers, set `JAMII_SMS_BACKEND=africastalking`,
    `JAMII_AT_USERNAME`, `JAMII_AT_API_KEY` and `JAMII_AT_SANDBOX=false`, then switch to
    `JAMII_ENVIRONMENT=production`, which refuses console SMS.
+5. **Scheduled jobs:** Vercel does not run the Celery workers, so Vercel Cron calls
+   `/internal/cron/daily` (set in `api/vercel.json`) at 23:00 UTC, 02:00 in Nairobi. It runs
+   the same jobs as Celery beat: deletes voice notes and text past their retention dates, old
+   login codes and old SMS bodies; retries queued SMS; sends reports stuck in processing to
+   people; and flags spikes if `JAMII_SPIKE_ALERTS_ENABLED=true`. Add `CRON_SECRET` to the
+   project's environment variables (any long random string, type Sensitive) and redeploy.
+   Vercel sends it as `Authorization: Bearer …`; without it the route answers 404 and nothing
+   runs. Crons only run on the production deployment; to run one now, use **Run** in the
+   project's Cron Jobs settings. Each run is in the audit log as `cron.ran`. If a job fails,
+   the others still run and the route answers 500, so Vercel logs the run as failed. The Hobby
+   plan allows one run a day, within the hour, so a failed SMS can wait up to a day for its
+   retry. On Pro, add a cron every few minutes for `/internal/cron/frequent` (SMS retries and
+   the stuck-report sweep). The weekly re-check sample does not run here: it samples what the
+   model accepted on its own, and without the workers the model is never called.
 
 The migrations turn on row-level security for every table and revoke the `anon` and
 `authenticated` grants, so Supabase's public REST API exposes nothing. The app connects as
-the tables' owner. Vercel does not run the Celery workers, so this deployment has no
-scheduled retention purge, SMS retries, stuck-report sweep or spike detection.
+the tables' owner.
 
 **Data location:** Supabase has no African region. Kenya's Data Protection Act restricts
 moving personal data abroad, so tell testers their data is stored in Ireland and get their

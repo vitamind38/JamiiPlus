@@ -11,7 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from jamii_api import __version__
 from jamii_api.config import get_settings
 from jamii_api.deps import LoginRequired
-from jamii_api.routers import channels, health, mobile
+from jamii_api.routers import channels, cron, health, mobile
 from jamii_api.web import admin, issues, pages, review
 
 SECURITY_HEADERS = {
@@ -81,7 +81,16 @@ def create_app() -> FastAPI:
         return RedirectResponse(f"/login?next={quote(nxt)}", 303)
 
     app.mount("/static", StaticFiles(directory=Path(__file__).parent / "web" / "static"), name="static")
-    for r in (health.router, mobile.router, channels.router, pages.router, review.router, issues.router, admin.router):
+    for r in (
+        health.router,
+        cron.router,
+        mobile.router,
+        channels.router,
+        pages.router,
+        review.router,
+        issues.router,
+        admin.router,
+    ):
         app.include_router(r)
     return app
 

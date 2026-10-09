@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     bootstrap_admin_name: str = "Administrator"
     # If set, /metrics needs "Authorization: Bearer <token>" (for hosts without a private network).
     metrics_token: str = ""
+    # Vercel Cron calls /internal/cron/* with "Authorization: Bearer <CRON_SECRET>". Unset, those
+    # routes do not exist; the Kenyan server runs the same jobs with Celery beat.
+    cron_secret: str = Field(default="", validation_alias=AliasChoices("JAMII_CRON_SECRET", "CRON_SECRET"))
     redis_url: str = "redis://localhost:6379/0"
     # When false (or Redis is unreachable) the API does the work inline instead of queueing it.
     queue_enabled: bool = True

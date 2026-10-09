@@ -21,7 +21,7 @@
 	}
 
 	# Internal endpoints are never exposed. Prometheus scrapes the API on the internal network.
-	@internal path /metrics /docs* /openapi.json
+	@internal path /metrics /docs* /openapi.json /internal/*
 	respond @internal 404
 
 	# Africa's Talking callbacks: only from their published addresses (set AT_CALLBACK_ALLOW).

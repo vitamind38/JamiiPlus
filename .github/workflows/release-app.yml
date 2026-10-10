@@ -1,0 +1,102 @@
+name: release app
+
+# Builds the CHP app for the test deployment and publishes the APK on GitHub Releases, free.
+# Run it from the Actions tab (Run workflow, give a version like 0.2.0), or push a tag app-v0.2.0.
+#
+# Needs three repository secrets, the app's signing key: ANDROID_KEYSTORE_BASE64 (the PKCS12
+# keystore, base64), ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS. Every release must use the
+# same key, or phones refuse to install the update over the old app.
+# Optional repository variables: APP_API_BASE_URL and APP_DATA_LOCATION.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, for example 0.2.0"
+        required: true
+  push:
+    tags: ["app-v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-app
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      API_BASE_URL: ${{ vars.APP_API_BASE_URL || 'https://jamiiplus-demo.vercel.app' }}
+      DATA_LOCATION: ${{ vars.APP_DATA_LOCATION || 'Ireland' }}
+      VERSION: ${{ inputs.version || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: {channel: stable, cache: true}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: "17"}
+
+      - name: Version
+        run: |
+          name="${VERSION#app-v}"
+          echo "$name" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::Version must look like 0.2.0, got $name"; exit 1; }
+          echo "NAME=$name" >> "$GITHUB_ENV"
+          echo "TAG=app-v$name" >> "$GITHUB_ENV"
+
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
+            echo "::error::Add the ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS secrets"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.p12
+          {
+            echo "storeFile=upload-keystore.p12"
+            echo "storeType=pkcs12"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyPassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+          } > android/key.properties
+
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter test
+
+      - name: Build
+        # The run number only grows, so each release installs over the one before.
+        run: >
+          flutter build apk --release
+          --build-name "$NAME" --build-number "${{ github.run_number }}"
+          --dart-define=API_BASE_URL="$API_BASE_URL"
+          --dart-define=DATA_LOCATION="$DATA_LOCATION"
+
+      - name: Check it is signed with the release key, not the debug key
+        run: |
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+          "$apksigner" verify --print-certs build/app/outputs/flutter-apk/app-release.apk | tee certs.txt
+          if grep -q "Android Debug" certs.txt; then echo "::error::Signed with the debug key"; exit 1; fi
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          apk="jamii-pulse-$NAME.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          sed -e "s|{version}|$NAME|g" -e "s|{server}|$API_BASE_URL|g" -e "s|{location}|$DATA_LOCATION|g" \
+            ../.github/app-release-notes.md > notes.md
+          gh release create "$TAG" "$apk" "$apk.sha256" \
+            --title "Jamii Pulse app $NAME" --notes-file notes.md --target "$GITHUB_SHA" --latest
+
+      - name: Remove the key from the runner
+        if: always()
+        run: rm -f android/app/upload-keystore.p12 android/key.properties

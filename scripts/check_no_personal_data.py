@@ -16,7 +16,9 @@ SYNTHETIC = re.compile(
     r"799000111|711XXXYYY)$"
 )
 SECRET = re.compile(r"(?i)(api[_-]?key|secret|password|token)\s*[=:]\s*['\"]?[A-Za-z0-9_\-]{24,}")
-BANNED_FILES = re.compile(r"(^|/)(\.env|.*\.dump(\.age)?|.*\.sql\.gz|.*\.csv|.*\.m4a|.*\.wav|.*\.amr|.*\.db)$")
+BANNED_FILES = re.compile(
+    r"(^|/)(\.env|key\.properties|.*\.dump(\.age)?|.*\.sql\.gz|.*\.csv|.*\.m4a|.*\.wav|.*\.amr|.*\.db|.*\.jks|.*\.p12|.*\.keystore)$"
+)
 ALLOWED_FILES = {"infra/.env.example"}
 # Third-party builds committed as-is (Drift's web worker and SQLite for the browser); their
 # minified numeric constants look like phone numbers.
@@ -37,7 +39,7 @@ def main() -> int:
         if rel in ALLOWED_FILES or rel in VENDORED:
             continue
         if BANNED_FILES.search(rel):
-            problems.append(f"{rel}: this kind of file must not be committed (env, dumps, audio, data)")
+            problems.append(f"{rel}: this kind of file must not be committed (env, keys, dumps, audio, data)")
             continue
         path = ROOT / rel
         if path.suffix in SKIP_SUFFIXES or not path.is_file():

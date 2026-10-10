@@ -60,9 +60,11 @@ release. See `docs/runbooks/release.md`.
 
 `flutter build apk --release --dart-define=API_BASE_URL=https://<your domain>`. Add
 `--dart-define=DATA_LOCATION=<country>` when the server is not in Kenya (the Supabase test
-deployment is in Ireland); the privacy notice names it. Before the
-pilot, set up a release signing key (`android/key.properties`, never committed) and
-distribute the APK through the county's channel or a private Play track.
+deployment is in Ireland); the privacy notice names it. Release builds are
+signed with the key in `android/key.properties` (never committed) and fall back to the debug
+key without it. Test versions are published by the `release app` workflow on GitHub Releases
+(see the main README); for the pilot, distribute through the county's channel or a private
+Play track.
 
 `pubspec.yaml` pins `analyzer` below 14.5 for code generation only, because build_runner
 2.16.1 does not yet work with analyzer 14.5. Remove the override when build_runner is fixed.

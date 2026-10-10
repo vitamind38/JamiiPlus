@@ -111,6 +111,22 @@ consent. Real CHP reports belong on the Kenyan stack below. Build the CHP app fo
 deployment with `--dart-define=API_BASE_URL=https://<your Vercel domain>` and
 `--dart-define=DATA_LOCATION=Ireland`, so its privacy notice names the right country.
 
+## The CHP app for testers: GitHub Releases
+
+Testers download the Android app free from
+**https://github.com/vitamind38/JamiiPlus/releases/latest**; each release page has install
+steps in English and Kiswahili. To publish a new version, open Actions → **release app** → Run
+workflow and give a version such as `0.2.0` (or push a tag `app-v0.2.0`). The workflow builds
+the APK for the test deployment (`APP_API_BASE_URL`, default `https://jamiiplus-demo.vercel.app`;
+`APP_DATA_LOCATION`, default `Ireland`; both repository variables), checks it is signed with
+the release key, and attaches it to a new release.
+
+Every release is signed with the same key, from the repository secrets
+`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_ALIAS`. Android only
+installs an update over the old app if the key matches, so **keep an offline copy of the
+keystore and its password** (they were created in the git-ignored `var/android-signing/`). If
+the key is lost, testers have to uninstall the app before installing the next version.
+
 ## Run the real stack
 
 ```bash

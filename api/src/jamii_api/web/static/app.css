@@ -154,13 +154,15 @@ details.table-view summary { cursor: pointer; color: var(--ink-2); font-size: 0.
 /* Forms */
 label { display: block; font-weight: 600; font-size: 0.88rem; margin: 12px 0 4px; }
 label.inline { display: inline-flex; gap: 6px; align-items: center; font-weight: 500; margin: 6px 16px 6px 0; }
-input[type=text], input[type=tel], input[type=number], select, textarea {
+input[type=text], input[type=tel], input[type=email], input[type=number], select, textarea {
   width: 100%; padding: 9px 11px; font: inherit; color: var(--ink); background: var(--surface);
   border: 1px solid var(--axis); border-radius: 6px; }
 textarea { min-height: 96px; resize: vertical; }
 input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 1px; }
 .hint { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
+.inline-form { display: flex; gap: 8px; align-items: center; }
+.inline-form input { min-width: 13rem; padding: 5px 8px; }
 .row { display: flex; flex-wrap: wrap; gap: 12px; }
 .row > * { flex: 1 1 160px; }
 button, .btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-weight: 600; cursor: pointer;

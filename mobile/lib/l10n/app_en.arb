@@ -2,9 +2,16 @@
   "@@locale": "en",
   "appTitle": "Jamii Pulse",
   "noticeTitle": "Before you start",
-  "noticeIntro": "Jamii Pulse lets you tell the county about problems that stop households getting care: missing medicines, distance, costs, closed facilities. Officers answer, and you get an SMS saying what was done.",
-  "noticeWhatWeKeep": "What we keep: your phone number, your community health unit, and the reports you send. Voice notes are deleted after 30 days. Reports describe problems and places, never patients.",
-  "noticeWhoSees": "Who sees it: your supervisors see your reports under a code name, not your name or number. County and national teams see totals. Everything is stored in Kenya.",
+  "noticeIntro": "Jamii Pulse lets you tell the county about problems that stop households getting care: missing medicines, distance, costs, closed facilities. Officers answer, and you get a message (SMS or email) saying what was done.",
+  "noticeWhatWeKeep": "What we keep: your phone number, your email address if you gave one, your community health unit, and the reports you send. Voice notes are deleted after 30 days. Reports describe problems and places, never patients.",
+  "noticeWhoSees": "Who sees it: your supervisors see your reports under a code name, not your name or number. County and national teams see totals. Everything is stored in {place}.",
+  "@noticeWhoSees": {
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
   "noticeRights": "You can ask for any report to be removed, and stop using the app at any time. Questions: ask your CHA.",
   "promisesTitle": "Our promises to you",
   "promiseNoDiscipline": "Reports are never used to discipline or rank individual CHPs.",
@@ -16,9 +23,17 @@
   "phoneLabel": "Your phone number",
   "phoneHint": "0712 345 678",
   "sendCode": "Send code",
-  "codeLabel": "Code from SMS",
-  "codeSentTo": "We sent a 6-digit code by SMS to {phone}.",
-  "@codeSentTo": {
+  "codeLabel": "6-digit code",
+  "codeSentBySms": "We sent a 6-digit code by SMS to {phone}.",
+  "@codeSentBySms": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "codeSentByEmail": "We sent a 6-digit code to the email address registered for {phone}. Check your spam folder too.",
+  "@codeSentByEmail": {
     "placeholders": {
       "phone": {
         "type": "String"
@@ -58,7 +73,7 @@
   "needSomething": "Choose a category or record a voice note.",
   "micPermission": "Allow the microphone so you can record.",
   "savedWillSend": "Saved. It will be sent when you have network.",
-  "sent": "Sent. You will get an SMS when there is news.",
+  "sent": "Sent. You will get a message when there is news.",
   "offline": "You are offline. Reports will be sent when you have network.",
   "sendNow": "Send now",
   "waitingToSend": "Waiting to send",
@@ -110,7 +125,7 @@
       }
     }
   },
-  "devCode": "Test server: your code is {code}. A real server sends it by SMS.",
+  "devCode": "Test server: your code is {code}. A real server sends it by SMS or email.",
   "@devCode": {
     "placeholders": {
       "code": {

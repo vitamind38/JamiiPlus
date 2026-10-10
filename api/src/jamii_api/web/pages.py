@@ -39,7 +39,8 @@ def login_send(request: Request, db: DB, phone: Annotated[str, Form()], next: An
     request.session["next"] = _safe_next(next)
     if sent.dev_code:
         where = "Demo" if get_settings().demo_mode else "Local development"
-        flash(request, f"{where}: your code is {sent.dev_code}. In the real system it arrives by SMS.", "dev")
+        channel = "email" if get_settings().message_channel == "email" else "SMS"
+        flash(request, f"{where}: your code is {sent.dev_code}. In the real system it arrives by {channel}.", "dev")
     return RedirectResponse("/login/verify", 303)
 
 

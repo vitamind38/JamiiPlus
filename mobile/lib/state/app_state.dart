@@ -85,7 +85,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> requestCode(String phone) => api.requestCode(phone);
+  Future<CodeRequest> requestCode(String phone) => api.requestCode(phone);
 
   Future<void> verifyCode(String phone, String code) async {
     final (token, profile) = await api.verifyCode(phone, code);

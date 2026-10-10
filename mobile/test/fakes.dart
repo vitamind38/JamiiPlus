@@ -18,15 +18,16 @@ class FakeApi implements ApiClient {
     ward: 'Kawangware',
     language: 'sw',
     consentRequired: consent ?? consentRequired,
-    currentConsentVersion: '2026-10-v1',
+    currentConsentVersion: '2026-10-v2',
   );
 
   String? devCode;
+  String channel = 'sms';
 
   @override
-  Future<String?> requestCode(String phone) async {
+  Future<CodeRequest> requestCode(String phone) async {
     calls.add('requestCode $phone');
-    return devCode;
+    return (channel: channel, devCode: devCode);
   }
 
   @override

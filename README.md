@@ -66,14 +66,26 @@ eu-west-1 region (Ireland).
    Alembic under a lock and loads the themes), `JAMII_STORAGE_BACKEND=supabase`,
    `JAMII_QUEUE_ENABLED=false`, `JAMII_PIPELINE_MODE=manual` and `JAMII_METRICS_TOKEN`, plus
    `JAMII_SECRET_KEY`, `JAMII_PSEUDONYM_KEY` and `JAMII_CHANNEL_CALLBACK_TOKEN`.
-3. **First admin:** set `JAMII_BOOTSTRAP_ADMIN_PHONE` (and `JAMII_BOOTSTRAP_ADMIN_NAME`) and
-   redeploy. The next cold start creates that admin if no admin exists yet. Add everyone
-   else in Admin.
-4. **SMS:** with `JAMII_SMS_BACKEND=console`, messages go to the Vercel runtime log with the
-   phone number masked. That is enough for the admin's first login code, but not for
-   testers. Before inviting testers, set `JAMII_SMS_BACKEND=africastalking`,
-   `JAMII_AT_USERNAME`, `JAMII_AT_API_KEY` and `JAMII_AT_SANDBOX=false`, then switch to
-   `JAMII_ENVIRONMENT=production`, which refuses console SMS.
+3. **First admin:** set `JAMII_BOOTSTRAP_ADMIN_PHONE`, `JAMII_BOOTSTRAP_ADMIN_NAME` and
+   `JAMII_BOOTSTRAP_ADMIN_EMAIL`, then redeploy. The next cold start creates that admin if no
+   admin exists yet, and gives them the email address if they have none. Add everyone else
+   in Admin.
+4. **Login codes and replies by email (free).** SMS costs money, so this deployment sends
+   codes and officers' replies by email from a Gmail account, at no cost and up to about
+   500 messages a day. People still log in with their phone number; the code goes to the
+   email address on file for that number, so give every officer and CHP an email address in
+   Admin (accounts without one cannot log in).
+   - In the Gmail account: turn on 2-Step Verification, then create an app password at
+     https://myaccount.google.com/apppasswords.
+   - Set `JAMII_SMS_BACKEND=email`, `JAMII_SMTP_USERNAME` (the Gmail address) and
+     `JAMII_SMTP_PASSWORD` (the 16-letter app password, type Sensitive), then
+     `JAMII_ENVIRONMENT=production` and redeploy. Production refuses `console`.
+   - The first email may land in spam; ask testers to mark it "not spam".
+   - Other SMTP services work too (`JAMII_SMTP_HOST`, `JAMII_SMTP_PORT`; 465 or 587).
+
+   With `JAMII_SMS_BACKEND=console` (staging) messages only go to the Vercel runtime log. For
+   real SMS later, use `africastalking` with `JAMII_AT_USERNAME`, `JAMII_AT_API_KEY` and
+   `JAMII_AT_SANDBOX=false`.
 5. **Scheduled jobs:** Vercel does not run the Celery workers, so Vercel Cron calls
    `/internal/cron/daily` (set in `api/vercel.json`) at 23:00 UTC, 02:00 in Nairobi. It runs
    the same jobs as Celery beat: deletes voice notes and text past their retention dates, old
@@ -95,7 +107,9 @@ the tables' owner.
 
 **Data location:** Supabase has no African region. Kenya's Data Protection Act restricts
 moving personal data abroad, so tell testers their data is stored in Ireland and get their
-consent. Real CHP reports belong on the Kenyan stack below.
+consent. Real CHP reports belong on the Kenyan stack below. Build the CHP app for this
+deployment with `--dart-define=API_BASE_URL=https://<your Vercel domain>` and
+`--dart-define=DATA_LOCATION=Ireland`, so its privacy notice names the right country.
 
 ## Run the real stack
 

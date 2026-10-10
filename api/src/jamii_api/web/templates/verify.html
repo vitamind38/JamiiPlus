@@ -5,7 +5,11 @@
   {% include "_login_art.html" %}
   <div class="login-form">
   <h1>Enter your code</h1>
+  {% if channel_word() == 'email' %}
+  <p class="sub">If {{ masked }} is registered, a 6-digit code is on its way to the email address on file. It expires in a few minutes. Check your spam folder too.</p>
+  {% else %}
   <p class="sub">If {{ masked }} is registered, a 6-digit code is on its way. It expires in a few minutes.</p>
+  {% endif %}
   {% if error %}<div class="flash error" role="alert">{{ error }}</div>{% endif %}
   <form method="post" action="/login/verify">
     <input type="hidden" name="csrf" value="{{ csrf }}">

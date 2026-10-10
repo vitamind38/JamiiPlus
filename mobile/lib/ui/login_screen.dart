@@ -18,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _codeSent = false;
   bool _busy = false;
   String? _devCode; // only from a local or demo server
+  String _channel = 'sms';
   String? _error;
 
   @override
@@ -69,16 +70,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: _busy
                     ? null
                     : () => _run(() async {
-                        final devCode = await state.requestCode(_phone.text);
+                        final sent = await state.requestCode(_phone.text);
                         setState(() {
                           _codeSent = true;
-                          _devCode = devCode;
+                          _channel = sent.channel;
+                          _devCode = sent.devCode;
                         });
                       }),
                 child: Text(t.sendCode),
               ),
             ] else ...[
-              Text(t.codeSentTo(_phone.text)),
+              Text(_channel == 'email' ? t.codeSentByEmail(_phone.text) : t.codeSentBySms(_phone.text)),
               if (_devCode != null) ...[
                 const SizedBox(height: 12),
                 NoPatientNamesBanner(text: t.devCode(_devCode!), icon: Icons.science_outlined),

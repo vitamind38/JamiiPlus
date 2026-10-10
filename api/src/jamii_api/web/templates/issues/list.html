@@ -2,7 +2,7 @@
 {% block title %}Issues · Jamii Pulse{% endblock %}
 {% block content %}
 <h1>Issues</h1>
-<p class="sub">Reports about the same theme in the same ward, grouped. Answer them here; the CHPs who raised them get an SMS.</p>
+<p class="sub">Reports about the same theme in the same ward, grouped. Answer them here; the CHPs who raised them get an {{ channel_word() }}.</p>
 
 <form method="get" action="/issues" class="card row" aria-label="Filter issues">
   <div><label for="status">Status</label>

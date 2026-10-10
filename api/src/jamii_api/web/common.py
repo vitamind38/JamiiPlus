@@ -43,6 +43,8 @@ templates.env.globals.update(
     is_admin=scope.is_admin,
     can_act_on=scope.can_act_on,
     demo_mode=lambda: get_settings().demo_mode,
+    # "SMS" or "email": how codes and replies reach people on this server.
+    channel_word=lambda: "email" if get_settings().message_channel == "email" else "SMS",
 )
 
 # Shown on the demo's login page. Synthetic accounts created by seed.demo_data().

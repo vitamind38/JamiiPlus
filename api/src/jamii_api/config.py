@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     # Creates the first admin on start-up if there is no admin yet. Everyone else is added in Admin.
     bootstrap_admin_phone: str = ""
     bootstrap_admin_name: str = "Administrator"
+    # Gives that admin an email address if they have none, so they can sign in by email.
+    bootstrap_admin_email: str = ""
     # If set, /metrics needs "Authorization: Bearer <token>" (for hosts without a private network).
     metrics_token: str = ""
     # Vercel Cron calls /internal/cron/* with "Authorization: Bearer <CRON_SECRET>". Unset, those
@@ -93,7 +95,9 @@ class Settings(BaseSettings):
     minio_bucket: str = "voice-notes"
     minio_secure: bool = False
 
-    sms_backend: str = "console"  # console | africastalking
+    # How codes and replies reach people: console (server log), africastalking (paid SMS) or
+    # email (free through a Gmail account; people need an email address on file).
+    sms_backend: str = "console"  # console | africastalking | email
     at_username: str = "sandbox"
     at_api_key: str = ""
     at_sender_id: str = ""  # leave empty to use the shared short code
@@ -101,6 +105,12 @@ class Settings(BaseSettings):
     # Africa's Talking does not sign callbacks; callbacks must carry this token.
     channel_callback_token: str = "dev-callback-token"
     ussd_service_code: str = "*384*1234#"
+    # Email delivery. Gmail: the account address and an app password (needs 2-Step Verification).
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 465  # 465: TLS from the start; 587: STARTTLS
+    smtp_username: str = ""
+    smtp_password: str = ""
+    mail_from: str = ""  # defaults to smtp_username
 
     pipeline_mode: PipelineMode = PipelineMode.MANUAL
     model_service_url: str = "http://localhost:8100"
@@ -128,7 +138,7 @@ class Settings(BaseSettings):
     max_text_chars: int = 2000
 
     issue_default_level: str = "cha"
-    consent_version: str = "2026-10-v1"
+    consent_version: str = "2026-10-v2"
 
     sentry_dsn: str = ""
     # Shows one-time codes on the login page. Refused outside local development.
@@ -145,6 +155,11 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    @property
+    def message_channel(self) -> str:
+        """How people receive login codes and replies: "email" or "sms"."""
+        return "email" if self.sms_backend == "email" else "sms"
 
     @property
     def shows_codes_on_screen(self) -> bool:
@@ -166,6 +181,11 @@ class Settings(BaseSettings):
             raise RuntimeError("Production sends real SMS: set JAMII_SMS_BACKEND=africastalking")
         if self.sms_backend == "africastalking" and not self.at_api_key and self.environment != "local":
             raise RuntimeError("Set JAMII_AT_USERNAME and JAMII_AT_API_KEY to send SMS through Africa's Talking")
+        if self.sms_backend == "email" and not (self.smtp_username and self.smtp_password):
+            if self.environment != "local":
+                raise RuntimeError(
+                    "Set JAMII_SMTP_USERNAME and JAMII_SMTP_PASSWORD (a Gmail app password) to send email"
+                )
 
 
 @lru_cache

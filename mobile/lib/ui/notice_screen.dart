@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app.dart';
+import '../config.dart';
 import '../l10n/app_localizations.dart';
 import 'widgets.dart';
 
@@ -25,7 +26,7 @@ class NoticeScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(t.noticeWhatWeKeep, style: text.bodyLarge),
             const SizedBox(height: 16),
-            Text(t.noticeWhoSees, style: text.bodyLarge),
+            Text(t.noticeWhoSees(dataLocation), style: text.bodyLarge),
             const SizedBox(height: 16),
             Text(t.noticeRights, style: text.bodyLarge),
             const SizedBox(height: 24),

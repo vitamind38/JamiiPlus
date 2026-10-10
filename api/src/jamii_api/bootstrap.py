@@ -18,7 +18,7 @@ from jamii_api.config import Settings, get_settings
 from jamii_api.db import Base, get_engine, session_scope
 from jamii_api.db.session import make_engine
 from jamii_api.models import Report, Role, User
-from jamii_api.security import normalize_phone
+from jamii_api.security import InvalidEmail, normalize_email, normalize_phone
 from jamii_api.seed import demo_data, seed_themes
 
 log = logging.getLogger("jamii.bootstrap")
@@ -81,6 +81,10 @@ def _prepare(settings: Settings) -> dict[str, int]:
             result["admin_created"] = int(
                 ensure_admin(db, settings.bootstrap_admin_phone, settings.bootstrap_admin_name)
             )
+            if settings.bootstrap_admin_email:
+                result["admin_email_set"] = int(
+                    fill_admin_email(db, settings.bootstrap_admin_phone, settings.bootstrap_admin_email)
+                )
         if settings.demo_mode and db.scalar(select(Report.id).limit(1)) is None:
             result.update(demo_data(db))
             log.info("demo data loaded: %s", result)
@@ -100,4 +104,20 @@ def ensure_admin(db, raw_phone: str, name: str) -> bool:
     db.flush()
     audit.record("admin.bootstrapped", actor_type="system")
     log.info("first admin created")
+    return True
+
+
+def fill_admin_email(db, raw_phone: str, raw_email: str) -> bool:
+    """Gives the bootstrap admin an email address if they have none. Never overwrites one."""
+    try:
+        email = normalize_email(raw_email)
+    except InvalidEmail:
+        log.warning("JAMII_BOOTSTRAP_ADMIN_EMAIL is not an email address; ignored")
+        return False
+    admin = db.scalar(select(User).where(User.phone == normalize_phone(raw_phone), User.role == Role.ADMIN))
+    if admin is None or admin.email:
+        return False
+    admin.email = email
+    db.flush()
+    audit.record("admin.email_bootstrapped", actor_type="system", object_type="user", object_id=admin.id)
     return True

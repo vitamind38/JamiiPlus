@@ -26,6 +26,7 @@ class OtpRequestIn(BaseModel):
 
 class OtpRequestOut(BaseModel):
     sent: bool = True
+    channel: Literal["sms", "email"] = "sms"  # so the app can say where to look for the code
     dev_code: str | None = None
 
 
@@ -139,7 +140,7 @@ def otp_request(body: OtpRequestIn, request: Request, db: DB):
         raise HTTPException(422, str(e)) from None
     except auth.TooManyAttempts as e:
         raise HTTPException(429, str(e)) from None
-    return OtpRequestOut(dev_code=sent.dev_code)
+    return OtpRequestOut(channel=get_settings().message_channel, dev_code=sent.dev_code)
 
 
 @router.post("/auth/otp/verify", response_model=TokenOut)

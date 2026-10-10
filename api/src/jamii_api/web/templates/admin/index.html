@@ -3,6 +3,7 @@
 {% block content %}
 <h1>Admin</h1>
 <p class="sub">Units, people and the theme list. Every change here is written to the audit log.</p>
+{% if by_email %}<p class="flash dev" role="note">Login codes and replies go by email. Anyone without an email address here cannot log in. Ask testers to check their spam folder for the first code.</p>{% endif %}
 <nav class="tabs"><a href="#units">Units</a><a href="#users">Officers and reviewers</a><a href="#chps">CHPs</a><a href="#themes">Themes</a></nav>
 
 <div class="stack">
@@ -37,13 +38,14 @@
 <section class="card" id="users">
   <h2>Officers and reviewers</h2>
   <div class="table-wrap"><table>
-    <thead><tr><th>Name</th><th>Role</th><th>Area</th><th>Reviews</th><th>Phone</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Role</th><th>Area</th><th>Reviews</th><th>Phone</th><th>Email</th><th></th></tr></thead>
     <tbody>{% for u in users %}<tr>
       <td>{{ u.name }}{% if not u.active %} <span class="pill">inactive</span>{% endif %}</td>
       <td>{{ u.role }}</td>
       <td>{{ u.chu.name if u.chu else (u.sub_county ~ ', ' if u.sub_county else '') ~ (u.county or 'All') }}</td>
       <td>{{ 'Yes' if u.can_review else '—' }}</td>
       <td class="num">{{ mask_phone(u.phone) }}</td>
+      <td><form method="post" action="/admin/users/{{ u.id }}/email" class="inline-form"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="email" name="email" aria-label="Email for {{ u.name }}" placeholder="{{ mask_email(u.email) if u.email else 'Add email' }}" required><button class="link">Save</button></form></td>
       <td>{% if u.id != user.id %}<form method="post" action="/admin/users/{{ u.id }}/toggle"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="link">{{ 'Deactivate' if u.active else 'Reactivate' }}</button></form>{% endif %}</td>
     </tr>{% endfor %}</tbody>
   </table></div>
@@ -53,6 +55,7 @@
       <div class="row">
         <div><label for="o-name">Full name</label><input id="o-name" name="name" type="text" required></div>
         <div><label for="o-phone">Phone</label><input id="o-phone" name="phone" type="tel" required></div>
+        <div><label for="o-email">Email{{ '' if by_email else ' (optional)' }}</label><input id="o-email" name="email" type="email"{{ ' required' if by_email }}></div>
         <div><label for="o-role">Role</label><select id="o-role" name="role">{% for r in roles %}<option value="{{ r.value }}">{{ r.value }}</option>{% endfor %}</select></div>
       </div>
       <div class="row">
@@ -71,21 +74,23 @@
   <h2>CHPs</h2>
   <p class="small muted">CHPs are shown by pseudonym. Supervisors never see who sent a report.</p>
   <div class="table-wrap"><table>
-    <thead><tr><th>Pseudonym</th><th>Unit</th><th>Language</th><th>Consent</th><th>Phone</th><th></th></tr></thead>
+    <thead><tr><th>Pseudonym</th><th>Unit</th><th>Language</th><th>Consent</th><th>Phone</th><th>Email</th><th></th></tr></thead>
     <tbody>{% for c in chps %}<tr>
       <td>{{ pseudonym(c.id) }}{% if not c.active %} <span class="pill">inactive</span>{% endif %}</td>
       <td>{{ c.chu.name }}</td>
       <td>{{ c.language }}</td>
       <td>{{ c.consented_at.strftime('%d %b %Y') if c.consented_at else 'Not yet' }}</td>
       <td class="num">{{ mask_phone(c.phone) }}</td>
+      <td><form method="post" action="/admin/chps/{{ c.id }}/email" class="inline-form"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="email" name="email" aria-label="Email for {{ pseudonym(c.id) }}" placeholder="{{ mask_email(c.email) if c.email else 'Add email' }}" required><button class="link">Save</button></form></td>
       <td><form method="post" action="/admin/chps/{{ c.id }}/toggle"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="link">{{ 'Deactivate' if c.active else 'Reactivate' }}</button></form></td>
-    </tr>{% else %}<tr><td colspan="6" class="muted">No CHPs yet.</td></tr>{% endfor %}</tbody>
+    </tr>{% else %}<tr><td colspan="7" class="muted">No CHPs yet.</td></tr>{% endfor %}</tbody>
   </table></div>
   <details><summary>Register a CHP</summary>
     <form method="post" action="/admin/chps">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <div class="row">
         <div><label for="c-phone">Phone</label><input id="c-phone" name="phone" type="tel" required></div>
+        <div><label for="c-email">Email{{ '' if by_email else ' (optional)' }}</label><input id="c-email" name="email" type="email"{{ ' required' if by_email }}></div>
         <div><label for="c-chu">Unit</label><select id="c-chu" name="chu_id" required>{% for u in units %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select></div>
         <div><label for="c-lang">Language</label><select id="c-lang" name="language"><option value="sw">Kiswahili</option><option value="en">English</option></select></div>
       </div>

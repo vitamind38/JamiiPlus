@@ -84,7 +84,7 @@ def test_demo_bootstrap_migrates_and_seeds_once(pg, db, monkeypatch):
     assert db.query(Report).count() == first["reports"]
     engine, _ = pg
     with engine.connect() as conn:
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0003"
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0004"
 
 
 def test_bootstrap_falls_back_when_the_migration_url_is_unreachable(pg, db, monkeypatch):
@@ -97,4 +97,4 @@ def test_bootstrap_falls_back_when_the_migration_url_is_unreachable(pg, db, monk
     assert bootstrap.bootstrap()["themes_added"] == 9  # migrated and seeded over the app's URL
     engine, _ = pg
     with engine.connect() as conn:
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0003"
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0004"

@@ -102,7 +102,8 @@ class Chp(Base):
     __tablename__ = "chp"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    phone: Mapped[str] = mapped_column(String(20), unique=True)  # E.164, used only to send SMS
+    phone: Mapped[str] = mapped_column(String(20), unique=True)  # E.164: the login, and where SMS go
+    email: Mapped[str | None] = mapped_column(String(254))  # where codes and replies go by email
     chu_id: Mapped[int] = mapped_column(ForeignKey("community_health_unit.id"), index=True)
     language: Mapped[str] = mapped_column(String(8), default="sw")
     role: Mapped[str] = mapped_column(String(20), default="chp")
@@ -122,6 +123,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     phone: Mapped[str] = mapped_column(String(20), unique=True)
+    email: Mapped[str | None] = mapped_column(String(254))
     name: Mapped[str] = mapped_column(String(120))
     role: Mapped[str] = mapped_column(String(20))
     can_review: Mapped[bool] = mapped_column(Boolean, default=False)

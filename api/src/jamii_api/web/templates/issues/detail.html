@@ -36,7 +36,7 @@
         {% for x in responses %}
         <li><strong>{{ status_label(x.kind) }}</strong> · {{ x.officer.name }} · <span class="muted">{{ x.created_at.strftime('%d %b %Y %H:%M') }}</span>
           <div>{{ x.action_text }}</div>
-          <div class="small muted">SMS to {{ x.recipients }} CHP{{ 's' if x.recipients != 1 }}{{ '' if x.sms_sent else ' · sending' }}</div></li>
+          <div class="small muted">{{ channel_word() }} to {{ x.recipients }} CHP{{ 's' if x.recipients != 1 }}{{ '' if x.sms_sent else ' · sending' }}</div></li>
         {% endfor %}
       </ol>
       {% else %}<p class="muted">Nothing yet. The CHPs who reported this are waiting to hear back.</p>{% endif %}
@@ -59,8 +59,8 @@
         </div>
         <label for="action_text">Message for the CHPs</label>
         <textarea id="action_text" name="action_text" maxlength="300" data-count="count" placeholder="Example: 200 packs of ORS delivered to Kawangware dispensary on 12 Oct."></textarea>
-        <p class="hint"><span id="count"></span>. Optional when escalating. You will see the exact SMS before it is sent.</p>
-        <div class="actions"><button type="submit">Preview SMS</button></div>
+        <p class="hint"><span id="count"></span>. Optional when escalating. You will see the exact message before it is sent.</p>
+        <div class="actions"><button type="submit">Preview message</button></div>
       </form>
     </div>
     {% if not issue.owner_id or issue.owner_id != user.id %}

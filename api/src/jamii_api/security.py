@@ -39,6 +39,25 @@ def pseudonym(chp_id: int) -> str:
     return "CHP-" + _hmac(get_settings().pseudonym_key, f"chp:{chp_id}")[:6].upper()
 
 
+class InvalidEmail(ValueError):
+    pass
+
+
+EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def normalize_email(raw: str) -> str:
+    email = (raw or "").strip().lower()
+    if len(email) > 254 or not EMAIL.match(email):
+        raise InvalidEmail("That does not look like an email address.")
+    return email
+
+
+def mask_email(email: str) -> str:
+    name, _, domain = email.partition("@")
+    return f"{name[:2]}***@{domain}" if domain else "***"
+
+
 def mask_phone(phone: str) -> str:
     return phone[:7] + "***" + phone[-2:] if len(phone) > 9 else "***"
 

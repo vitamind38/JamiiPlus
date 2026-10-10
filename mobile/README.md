@@ -58,7 +58,9 @@ release. See `docs/runbooks/release.md`.
 
 ## Release builds
 
-`flutter build apk --release --dart-define=API_BASE_URL=https://<your domain>`. Before the
+`flutter build apk --release --dart-define=API_BASE_URL=https://<your domain>`. Add
+`--dart-define=DATA_LOCATION=<country>` when the server is not in Kenya (the Supabase test
+deployment is in Ireland); the privacy notice names it. Before the
 pilot, set up a release signing key (`android/key.properties`, never committed) and
 distribute the APK through the county's channel or a private Play track.
 

@@ -11,6 +11,7 @@ from datetime import timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from jamii_api.config import get_settings
 from jamii_api.db.base import utcnow
 from jamii_api.models import (
     Channel,
@@ -319,7 +320,7 @@ def demo_data(db: Session, reports_per_chp: int = 6, seed: int = 7) -> dict[str,
                 phone=phone,
                 chu_id=units[n % len(units)].id,
                 language="en" if n % 4 == 0 else "sw",
-                consent_version="2026-10-v1",
+                consent_version=get_settings().consent_version,
                 consented_at=utcnow(),
             )
             db.add(chp)

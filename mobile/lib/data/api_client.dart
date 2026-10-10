@@ -5,6 +5,9 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
+/// Where a login code went, and the code itself on test servers.
+typedef CodeRequest = ({String channel, String? devCode});
+
 /// Anything the API can say back, as types the app can act on.
 sealed class ApiException implements Exception {
   const ApiException(this.message);
@@ -161,10 +164,12 @@ class ApiClient {
     };
   });
 
-  /// Returns the code itself only from a local or demo server, which never sends a real SMS.
-  Future<String?> requestCode(String phone) async {
+  /// Where the code went ("sms" or "email"), and the code itself only from a local or demo
+  /// server, which never sends a real message.
+  Future<CodeRequest> requestCode(String phone) async {
     final j = await _json('POST', '/auth/otp/request', {'phone': phone});
-    return j is Map ? j['dev_code'] as String? : null;
+    if (j is! Map) return (channel: 'sms', devCode: null);
+    return (channel: j['channel'] as String? ?? 'sms', devCode: j['dev_code'] as String?);
   }
 
   Future<(String, Me)> verifyCode(String phone, String code) async {

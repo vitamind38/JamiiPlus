@@ -9,9 +9,10 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from jamii_api import audit
+from jamii_api.config import get_settings
 from jamii_api.deps import DB, SessionUser
 from jamii_api.models import Chp, CommunityHealthUnit, Role, Theme, User
-from jamii_api.security import InvalidPhone, mask_phone, normalize_phone
+from jamii_api.security import InvalidEmail, InvalidPhone, mask_email, mask_phone, normalize_email, normalize_phone
 from jamii_api.services import scope
 from jamii_api.web.common import check_csrf, flash, render
 
@@ -56,7 +57,13 @@ def index(request: Request, db: DB, user: SessionUser):
         themes=db.scalars(select(Theme).order_by(Theme.sort_order, Theme.id)).all(),
         roles=list(Role),
         mask_phone=mask_phone,
+        mask_email=mask_email,
+        by_email=get_settings().message_channel == "email",
     )
+
+
+def _optional_email(raw: str) -> str | None:
+    return normalize_email(raw) if raw.strip() else None
 
 
 @router.post("/units", dependencies=CSRF)
@@ -105,12 +112,14 @@ def add_user(
     sub_county: Annotated[str, Form()] = "",
     county: Annotated[str, Form()] = "",
     can_review: Annotated[str | None, Form()] = None,
+    email: Annotated[str, Form()] = "",
 ):
     _admin(user)
     try:
         phone = normalize_phone(phone)
         role = Role(role)
-    except (InvalidPhone, ValueError) as e:
+        email = _optional_email(email)
+    except (InvalidPhone, InvalidEmail, ValueError) as e:
         return _back(request, str(e), "error", "#users")
     unit = db.get(CommunityHealthUnit, int(chu_id)) if chu_id.isdigit() else None
     if role == Role.CHA and unit is None:
@@ -121,6 +130,7 @@ def add_user(
         return _back(request, "A county officer needs a county.", "error", "#users")
     new = User(
         phone=phone,
+        email=email,
         name=name.strip(),
         role=role,
         can_review=bool(can_review) or role == Role.REVIEWER,
@@ -160,15 +170,17 @@ def add_chp(
     phone: Annotated[str, Form()],
     chu_id: Annotated[int, Form()],
     language: Annotated[str, Form()] = "sw",
+    email: Annotated[str, Form()] = "",
 ):
     _admin(user)
     try:
         phone = normalize_phone(phone)
-    except InvalidPhone as e:
+        email = _optional_email(email)
+    except (InvalidPhone, InvalidEmail) as e:
         return _back(request, str(e), "error", "#chps")
     if db.get(CommunityHealthUnit, chu_id) is None:
         return _back(request, "Choose a community health unit.", "error", "#chps")
-    db.add(Chp(phone=phone, chu_id=chu_id, language="en" if language == "en" else "sw"))
+    db.add(Chp(phone=phone, email=email, chu_id=chu_id, language="en" if language == "en" else "sw"))
     audit.record("admin.chp_added", actor_type="user", actor_id=user.id, chu_id=chu_id)
     return _commit(db, request, "CHP registered. They can now log in with their phone number.", "#chps")
 
@@ -185,6 +197,33 @@ def toggle_chp(request: Request, db: DB, user: SessionUser, chp_id: int):
         "admin.chp_toggled", actor_type="user", actor_id=user.id, object_type="chp", object_id=chp.id, active=chp.active
     )
     return _commit(db, request, f"CHP is now {'active' if chp.active else 'inactive'}.", "#chps")
+
+
+@router.post("/users/{user_id}/email", dependencies=CSRF)
+def set_user_email(request: Request, db: DB, user: SessionUser, user_id: int, email: Annotated[str, Form()] = ""):
+    _admin(user)
+    other = db.get(User, user_id)
+    if other is None:
+        raise HTTPException(404)
+    return _set_email(request, db, user, other, "user", email, "#users")
+
+
+@router.post("/chps/{chp_id}/email", dependencies=CSRF)
+def set_chp_email(request: Request, db: DB, user: SessionUser, chp_id: int, email: Annotated[str, Form()] = ""):
+    _admin(user)
+    chp = db.get(Chp, chp_id)
+    if chp is None:
+        raise HTTPException(404)
+    return _set_email(request, db, user, chp, "chp", email, "#chps")
+
+
+def _set_email(request: Request, db, user: User, account: User | Chp, kind: str, raw: str, anchor: str):
+    try:
+        account.email = normalize_email(raw)
+    except InvalidEmail as e:
+        return _back(request, str(e), "error", anchor)
+    audit.record("admin.email_set", actor_type="user", actor_id=user.id, object_type=kind, object_id=account.id)
+    return _commit(db, request, f"Email saved: {mask_email(account.email)}.", anchor)
 
 
 @router.post("/themes", dependencies=CSRF)

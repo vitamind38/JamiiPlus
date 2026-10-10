@@ -76,6 +76,20 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('the notice names where data is kept, and the login says where the code went', (tester) async {
+    api.channel = 'email';
+    await boot(tester);
+    expect(find.textContaining('Kila kitu kinahifadhiwa nchini $dataLocation'), findsOneWidget);
+    await tester.tap(find.text('Nimeelewa na ninakubali'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '0712345678');
+    await tester.tap(find.text('Tuma nambari'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('kwa barua pepe iliyosajiliwa kwa 0712345678'), findsOneWidget);
+    expect(find.textContaining('kwa SMS'), findsNothing);
+    await finish(tester);
+  });
+
   testWidgets('switching language changes the notice', (tester) async {
     await boot(tester);
     await tester.tap(find.text('English'));
